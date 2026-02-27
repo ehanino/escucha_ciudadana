@@ -158,8 +158,8 @@
             <div class="mb-10">
                 <div class="flex justify-between items-end text-xs sm:text-sm font-bold uppercase text-gray-500 mb-3">
                     <div class="flex items-center gap-2">
-                        <button onclick="restartForm()" class="text-gray-400 hover:text-white transition-colors"
-                            title="Volver al inicio">
+                        <button type="button" onclick="restartForm()"
+                            class="text-gray-400 hover:text-white transition-colors" title="Volver al inicio">
                             <i data-lucide="home" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                         </button>
                         <span>Diagnóstico Callao</span>
@@ -347,7 +347,7 @@
         }
 
         function restartForm() {
-            window.location.reload();
+            window.location.href = window.location.pathname;
         }
 
         async function finish() {
