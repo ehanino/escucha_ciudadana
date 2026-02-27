@@ -27,6 +27,7 @@ class Participacion(models.Model):
     dni = models.CharField(max_length=8, blank=True, null=True)
     whatsapp = models.CharField(max_length=20, blank=True, null=True)
     tema = models.ForeignKey(Tema, on_delete=models.CASCADE)
+    tema_libre = models.CharField(max_length=255, blank=True, null=True, help_text="Especificar tema si se seleccionó 'Otros'")
     referido_por = models.ForeignKey(Brigadista, on_delete=models.SET_NULL, null=True, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 

@@ -31,6 +31,7 @@ def guardar_participacion(request):
             dni = data.get('dni')
             whatsapp = data.get('phone')
             tema_nombre = data.get('topic')
+            tema_libre = data.get('customTopic')
             
             if not all([nombre, whatsapp, tema_nombre]):
                 return JsonResponse({'error': 'Faltan datos'}, status=400)
@@ -49,6 +50,7 @@ def guardar_participacion(request):
                 dni=dni,
                 whatsapp=whatsapp,
                 tema=tema,
+                tema_libre=tema_libre,
                 referido_por=brigadista
             )
             

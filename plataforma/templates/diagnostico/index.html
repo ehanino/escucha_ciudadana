@@ -190,6 +190,16 @@
                             class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"></i>
                     </div>
                     {% endfor %}
+                    <!-- Opción Tema Libre -->
+                    <div class="option-card p-6 rounded-2xl bg-white/5 flex items-center justify-between group"
+                        onclick="handleChoice('Otros')">
+                        <div class="flex items-center gap-4">
+                            <i data-lucide="pen-tool" class="text-red-500 w-6 h-6"></i>
+                            <span class="font-bold text-lg md:text-xl">Otro tema (Escribir)</span>
+                        </div>
+                        <i data-lucide="chevron-right"
+                            class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"></i>
+                    </div>
                 </div>
             </div>
 
@@ -255,6 +265,8 @@
                     <p class="text-gray-400 mb-8 text-base italic">Plan sobre: <span id="summary-topic"
                             class="text-white font-bold"></span>.</p>
                     <div class="space-y-4">
+                        <input type="text" id="custom-topic" placeholder="¿Cuál es tu tema propuesto?"
+                            class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none hidden mb-4">
                         <input type="text" id="name" placeholder="Tu nombre y apellido"
                             class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none">
                         <input type="text" id="dni" placeholder="Tu número de DNI (opcional)" pattern="\d{8}"
@@ -280,6 +292,20 @@
 
         function handleChoice(val) {
             userResponses.topic = val;
+
+            if (val === 'Otros') {
+                // Tema Libre: saltar a la pantalla final directamente y mostrar input adicional
+                document.getElementById('summary-topic').innerText = "TEMA PROPUESTO";
+                document.getElementById('custom-topic').classList.remove('hidden');
+
+                // Ocultar paso 1 y saltar al 4
+                document.getElementById(`step-1`).classList.remove('active');
+                document.getElementById(`step-4`).classList.add('active');
+                document.getElementById('progress-fill').style.width = '100%';
+                document.getElementById('step-counter').innerText = `Paso Final`;
+                return;
+            }
+
             const content = contentMap[val];
             if (content) {
                 document.getElementById('sabotage-text').innerText = content.sabotage;
@@ -328,6 +354,12 @@
             const name = document.getElementById('name').value;
             const dni = document.getElementById('dni').value;
             const phone = document.getElementById('phone').value;
+            let customTopic = '';
+
+            if (userResponses.topic === 'Otros') {
+                customTopic = document.getElementById('custom-topic').value;
+                if (!customTopic) return alert("Por favor, escribe tu tema propuesto.");
+            }
 
             if (!name || !phone) {
                 return alert("Por favor, llena tu nombre y WhatsApp para continuar.");
@@ -343,7 +375,13 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
-                body: JSON.stringify({ name, dni, phone, topic: userResponses.topic })
+                body: JSON.stringify({
+                    name,
+                    dni,
+                    phone,
+                    topic: userResponses.topic,
+                    customTopic: customTopic
+                })
             });
 
             if (response.ok) {
