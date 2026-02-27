@@ -1,0 +1,29 @@
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Entornos Virtuales
+venv/
+env/
+.env
+
+# Archivos Estáticos Recollectados (en producción)
+staticfiles/
+
+# Python
+*.py[cod]
+*$py.class
+
+# PyBuilder
+target/
+
+# VScode
+.vscode/
+
+# MacOS
+.DS_Store

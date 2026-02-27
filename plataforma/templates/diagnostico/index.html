@@ -1,0 +1,395 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico Participativo | Eduardo Herrera 2026</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&family=Space+Grotesk:wght@300;500;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --jp-red: #FF0000;
+            --jp-green: #00FF41;
+            --dark-pure: #000000;
+        }
+
+        body {
+            background-color: var(--dark-pure);
+            color: #FFFFFF;
+            font-family: 'Space Grotesk', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .font-display {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .glow-red {
+            background: radial-gradient(circle at center, rgba(255, 0, 0, 0.12) 0%, transparent 70%);
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .option-card {
+            transition: all 0.4s ease;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .option-card:hover {
+            border-color: var(--jp-red);
+            background: rgba(255, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--jp-red), var(--jp-green));
+            width: 25%;
+            transition: width 0.6s ease;
+            box-shadow: 0 0 15px var(--jp-red);
+        }
+
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+            animation: slideUp 0.6s ease forwards;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .bg-dots {
+            background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        .alert-box {
+            background: rgba(255, 0, 0, 0.1);
+            border-left: 4px solid var(--jp-red);
+        }
+    </style>
+</head>
+
+<body class="bg-dots min-h-screen flex flex-col">
+    <nav
+        class="p-4 md:p-6 flex flex-col md:flex-row justify-between items-center relative z-50 max-w-7xl mx-auto w-full gap-4 md:gap-0">
+        <div class="flex items-center w-full md:w-auto justify-center md:justify-start">
+            <div
+                class="bg-white/5 p-2 py-3 md:py-2 rounded-xl border border-white/10 w-full max-w-[220px] sm:max-w-[300px] md:max-w-[400px] flex justify-center">
+                <img src="{% static 'images/Juntos Por el Perú.png' %}" alt="JP"
+                    class="w-full h-auto object-contain max-h-12 md:max-h-20">
+            </div>
+        </div>
+        <div
+            class="px-4 py-1.5 rounded-full border border-white/10 bg-white/5 text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest text-center whitespace-nowrap">
+            Plataforma Ciudadana
+        </div>
+    </nav>
+
+    <main
+        class="flex-1 flex flex-col lg:flex-row items-center justify-center p-4 relative max-w-7xl mx-auto w-full gap-8">
+        <div class="absolute inset-0 glow-red z-0"></div>
+
+        <!-- Columna Izquierda: Retrato del Candidato -->
+        <div
+            class="relative z-10 flex flex-1 flex-col justify-center items-center h-auto lg:h-[500px] xl:h-[600px] mb-8 lg:mb-0 transform lg:-translate-y-8 xl:-translate-y-10">
+            <img src="{% static 'images/RetratoSinFondoCamisaBlancaConLogo.png' %}" alt="Eduardo Herrera"
+                class="max-h-[300px] sm:max-h-[400px] lg:max-h-[520px] object-contain drop-shadow-[0_0_30px_rgba(255,0,0,0.3)] z-10">
+            <div class="mt-4 text-center z-20">
+                <h1
+                    class="text-3xl sm:text-4xl xl:text-5xl font-extrabold font-display uppercase tracking-tight text-white drop-shadow-lg">
+                    Eduardo <span class="text-red-600">Herrera</span>
+                </h1>
+                <p class="text-gray-400 font-bold tracking-[0.2em] uppercase text-[10px] sm:text-xs mt-1">Diputado por
+                    el Callao</p>
+                <div class="mt-6 flex items-center justify-center gap-4">
+                    <a href="https://facebook.com/EduardoHerreraDiputadoPorElCallao" target="_blank"
+                        class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-blue-600 hover:border-blue-600 transition-all shadow-lg">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill-rule="evenodd"
+                                d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                    <a href="https://tiktok.com/@eduardoherrera" target="_blank"
+                        class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-black hover:border-black transition-all shadow-lg">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                            <path
+                                d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.06-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 2.25-.97 4.5-2.58 6.09-1.65 1.63-4.04 2.53-6.4 2.19-2.31-.33-4.29-1.89-5.18-4.02-.91-2.18-.63-4.8.76-6.72 1.35-1.84 3.73-2.92 6-2.58v4.14c-1.1.13-2.22-.05-3.08-.72-.88-.68-1.36-1.88-1.11-2.97.23-1.01 1.08-1.85 2.08-2.12 1.22-.32 2.65-.01 3.52 1.02.5.58.75 1.34.78 2.11.05 4.52.02 9.04.03 13.56.02-6.52.01-13.04.01-19.56z" />
+                        </svg>
+                    </a>
+                    <a href="https://wa.me/51954124774" target="_blank"
+                        class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-white hover:bg-green-500 hover:border-green-500 transition-all shadow-lg">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill-rule="evenodd"
+                                d="M12.031 2.007a9.969 9.969 0 00-6.685 17.5l-1.503 5.495 5.626-1.474C10.285 23.8 11.157 24 12.031 24c5.523 0 10-4.477 10-10s-4.477-10-10-10zm-.058 1.834c4.47 0 8.1 3.63 8.1 8.1 0 4.47-3.63 8.1-8.1 8.1-1.442 0-2.822-.38-4.04-1.09l-.29-.17-2.92.766.776-2.845-.187-.297a7.994 7.994 0 01-1.129-4.323c.09-4.43 3.72-8.04 8.14-8.04H11.97zm3.179 4.88c-.28-.08-1.65-.82-1.9-.91-.26-.1-.45-.15-.64.13-.19.28-.71.91-.87 1.1-.16.18-.32.2-.6.06-.28-.14-1.18-.44-2.25-1.4-1.32-1.18-1.74-1.47-1.94-1.75-.19-.28-.02-.44.12-.58.12-.13.28-.33.42-.49.13-.17.18-.28.27-.47.09-.19.04-.36-.03-.49-.07-.13-.64-1.55-.87-2.12-.23-.56-.46-.48-.64-.49-.17-.01-.36-.01-.55-.01s-.51.07-.78.36c-.28.3-1.05 1.03-1.05 2.5 0 1.48 1.08 2.92 1.23 3.12.14.2 2.12 3.24 5.15 4.54.72.31 1.28.49 1.72.63.72.23 1.38.2 1.9.12.58-.09 1.8-.73 2.05-1.44.25-.7.25-1.31.18-1.44-.08-.13-.28-.2-.55-.34z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna Derecha: Formulario -->
+        <div class="flex-1 w-full max-w-2xl glass-panel rounded-[40px] p-8 md:p-12 relative z-10 shadow-2xl">
+            <!-- Barra de Progreso -->
+            <div class="mb-10">
+                <div class="flex justify-between items-end text-xs sm:text-sm font-bold uppercase text-gray-500 mb-3">
+                    <div class="flex items-center gap-2">
+                        <button onclick="restartForm()" class="text-gray-400 hover:text-white transition-colors"
+                            title="Volver al inicio">
+                            <i data-lucide="home" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                        </button>
+                        <span>Diagnóstico Callao</span>
+                    </div>
+                    <span id="step-counter">Paso 1 de 4</span>
+                </div>
+                <div class="h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div id="progress-fill" class="progress-fill"></div>
+                </div>
+            </div>
+
+            <!-- Paso 1 -->
+            <div id="step-1" class="step active">
+                <h2 class="text-3xl md:text-4xl font-extrabold mb-8 font-display italic leading-tight">¿Qué es lo
+                    que
+                    <span class="text-red-600">más te indigna</span> hoy del Callao?
+                </h2>
+                <div class="grid grid-cols-1 gap-4">
+                    {% for tema in temas %}
+                    <div class="option-card p-6 rounded-2xl bg-white/5 flex items-center justify-between group"
+                        onclick="handleChoice('{{ tema.nombre }}')">
+                        <div class="flex items-center gap-4">
+                            <!-- Ícono dinámico basado en un loop o genérico por defecto -->
+                            <i data-lucide="target" class="text-red-500 w-6 h-6"></i>
+                            <span class="font-bold text-lg md:text-xl">{{ tema.nombre }}</span>
+                        </div>
+                        <i data-lucide="chevron-right"
+                            class="w-5 h-5 text-gray-400 group-hover:text-white transition-colors"></i>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Paso 2 -->
+            <div id="step-2" class="step">
+                <div class="alert-box p-6 rounded-2xl mb-8">
+                    <h3 class="text-red-500 font-bold uppercase text-xs tracking-widest mb-2 flex items-center gap-2">
+                        <i data-lucide="info" class="w-4 h-4"></i> El Congreso te está fallando
+                    </h3>
+                    <p id="sabotage-text" class="text-sm text-gray-300"></p>
+                </div>
+                <h2 id="p2-question" class="text-2xl font-bold mb-6 font-display italic"></h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <div id="btn-opcion-si"
+                        class="option-card p-5 rounded-xl bg-white/5 text-center font-bold text-lg md:text-xl"
+                        onclick="nextStep(2)">
+                        SÍ,
+                        lo vivo a diario</div>
+                    <div id="btn-opcion-no"
+                        class="option-card p-5 rounded-xl bg-white/5 text-center font-bold text-lg md:text-xl"
+                        onclick="showContextAndProceed()">
+                        No
+                        sabía que pasaba eso</div>
+                </div>
+            </div>
+
+            <!-- Paso Intermedio (2.5) -->
+            <div id="step-2-5" class="step">
+                <div class="alert-box p-6 rounded-2xl mb-8">
+                    <h3 class="text-red-500 font-bold uppercase text-xs tracking-widest mb-4 flex items-center gap-2">
+                        <i data-lucide="book-open" class="w-4 h-4 text-red-500"></i> Contexto
+                    </h3>
+                    <p id="context-no-text" class="text-base text-gray-300"></p>
+                </div>
+                <button
+                    class="w-full bg-red-600 hover:bg-red-700 py-5 rounded-2xl font-bold uppercase shadow-xl transition-colors"
+                    onclick="proceedFromContext()">Quiero más información</button>
+            </div>
+
+            <!-- Paso 3 -->
+            <div id="step-3" class="step">
+                <div class="bg-green-600/10 border-l-4 border-green-500 p-6 rounded-2xl mb-8">
+                    <h3 class="text-green-500 font-bold uppercase text-xs tracking-widest mb-2">Mi Propuesta de Ley:
+                    </h3>
+                    <p id="proposal-text" class="text-lg font-bold text-white mb-2"></p>
+                    <p id="proposal-impact" class="text-xs text-gray-400"></p>
+                </div>
+                <h2 class="text-2xl font-bold mb-6 font-display">¿Apoyarías esta como la <span
+                        class="text-red-600 underline">primera acción</span> de Eduardo?</h2>
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="option-card p-5 rounded-xl bg-white/5 text-center font-bold" onclick="nextStep(3)">
+                        APOYO
+                        TOTAL</div>
+                    <div class="option-card p-5 rounded-xl bg-white/5 text-center font-bold" onclick="nextStep(3)">
+                        Quiero más información</div>
+                </div>
+            </div>
+
+            <!-- Paso 4 -->
+            <div id="step-4" class="step">
+                <div class="text-center">
+                    <h2 class="text-3xl font-extrabold mb-4 font-display italic">¡Bien, chalaco!</h2>
+                    <p class="text-gray-400 mb-8 text-base italic">Plan sobre: <span id="summary-topic"
+                            class="text-white font-bold"></span>.</p>
+                    <div class="space-y-4">
+                        <input type="text" id="name" placeholder="Tu nombre y apellido"
+                            class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none">
+                        <input type="text" id="dni" placeholder="Tu número de DNI (opcional)" pattern="\d{8}"
+                            maxlength="8" class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none">
+                        <input type="tel" id="phone" placeholder="WhatsApp"
+                            class="w-full bg-white/5 border border-white/10 p-4 rounded-xl outline-none">
+                        <button onclick="finish()"
+                            class="w-full bg-red-600 py-4 hover:bg-red-700 transition-colors rounded-xl font-bold uppercase">Unirme
+                            a la Brigada</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </main>
+    <script>
+        lucide.createIcons();
+        let userResponses = { topic: '', name: '', phone: '' };
+
+        // Render contentMap from json context safely 
+        // @ts-ignore
+        const contentMap = {{ content_json| safe }};
+
+        function handleChoice(val) {
+            userResponses.topic = val;
+            const content = contentMap[val];
+            if (content) {
+                document.getElementById('sabotage-text').innerText = content.sabotage;
+                document.getElementById('p2-question').innerText = content.question;
+                document.getElementById('btn-opcion-si').innerText = content.opcion_si || "SÍ, lo vivo a diario";
+                document.getElementById('btn-opcion-no').innerText = content.opcion_no || "No sabía que pasaba eso";
+                document.getElementById('context-no-text').innerText = content.contexto_no || "Aquí tienes más información sobre lo que está ocurriendo actualmente...";
+                document.getElementById('proposal-text').innerText = content.proposal;
+                document.getElementById('proposal-impact').innerText = content.impact;
+                document.getElementById('summary-topic').innerText = val.toUpperCase();
+                nextStep(1);
+            } else {
+                alert("Tema no configurado");
+            }
+        }
+
+        function nextStep(current) {
+            document.getElementById(`step-${current}`).classList.remove('active');
+            document.getElementById(`step-${current + 1}`).classList.add('active');
+            const step = current + 1;
+            // Evitar que la barra pase de largo visualmente si hay pasos intermedios no contados.
+            document.getElementById('progress-fill').style.width = (step / 4) * 100 + '%';
+            if (step <= 4) document.getElementById('step-counter').innerText = `Paso ${step} de 4`;
+        }
+
+        function showContextAndProceed() {
+            // Ocultar paso 2
+            document.getElementById(`step-2`).classList.remove('active');
+            // Mostrar paso 2.5
+            document.getElementById(`step-2-5`).classList.add('active');
+        }
+
+        function proceedFromContext() {
+            // Ocultar 2.5 y pasar directo al 3
+            document.getElementById(`step-2-5`).classList.remove('active');
+            document.getElementById(`step-3`).classList.add('active');
+            document.getElementById('progress-fill').style.width = (3 / 4) * 100 + '%';
+            document.getElementById('step-counter').innerText = `Paso 3 de 4`;
+        }
+
+        function restartForm() {
+            window.location.reload();
+        }
+
+        async function finish() {
+            const name = document.getElementById('name').value;
+            const dni = document.getElementById('dni').value;
+            const phone = document.getElementById('phone').value;
+
+            if (!name || !phone) {
+                return alert("Por favor, llena tu nombre y WhatsApp para continuar.");
+            }
+            if (dni && (dni.length !== 8 || isNaN(dni))) {
+                return alert("Si ingresas tu DNI, asegúrate de que tenga 8 números.");
+            }
+
+            // Guardar en Django
+            const response = await fetch('/guardar-participacion/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ name, dni, phone, topic: userResponses.topic })
+            });
+
+            if (response.ok) {
+                // Generar mensaje estructurado para WhatsApp Business
+                let msg = `Registro - Brigada Ciudadana\n\nHola Eduardo Herrera, soy *${name}*.\nQuiero apoyar tus propuestas sobre: *${userResponses.topic}*.`;
+                if (dni && dni.trim() !== '') {
+                    msg += `\nMi DNI es: ${dni}`;
+                }
+
+                const waUrl = `https://wa.me/51954124774?text=${encodeURIComponent(msg)}`;
+
+                // Abrir WhatsApp
+                const a = document.createElement('a');
+                a.href = waUrl;
+                a.target = '_blank';
+                a.rel = 'noopener noreferrer';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                // Forzar foco en la ventana actual (por si acaso)
+                window.focus();
+
+                // Mostrar pantalla final con bono ONPE
+                document.getElementById('step-4').innerHTML = `
+                    <div class="text-center">
+                        <i data-lucide="check-circle" class="w-16 h-16 text-green-500 mx-auto mb-4"></i>
+                        <h2 class="text-3xl font-extrabold mb-2 font-display text-green-500 italic">¡Gracias Chalaco!</h2>
+                        <p class="text-gray-300 mb-8 text-sm">Tu registro ha sido enviado exitosamente.</p>
+                        
+                        <div class="bg-blue-900/40 border border-blue-500/30 p-6 rounded-2xl">
+                            <h3 class="font-bold text-lg mb-2 text-white">¿Dónde te toca votar?</h3>
+                            <p class="text-sm text-gray-300 mb-6">Consulta tu local de votación oficial directamente en la web de la ONPE usando tu DNI.</p>
+                            <a href="https://consultaelectoral.onpe.gob.pe/" target="_blank"
+                                class="inline-block w-full bg-blue-600 hover:bg-blue-700 py-4 rounded-xl font-bold uppercase text-white transition-colors shadow-lg">
+                                Consultar Local ONPE
+                            </a>
+                        </div>
+                    </div>
+                `;
+                lucide.createIcons();
+            } else {
+                alert("Ocurrió un error al guardar tu participación.");
+            }
+        }
+    </script>
+</body>
+
+</html>
