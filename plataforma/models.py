@@ -56,3 +56,14 @@ class Participacion(models.Model):
 
     def __str__(self):
         return self.nombre_vecino
+
+class Visita(models.Model):
+    ip_direccion = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+    fecha = models.DateTimeField(auto_now_add=True)
+    ruta = models.CharField(max_length=255, default='/')
+    candidato = models.ForeignKey(Candidato, on_delete=models.SET_NULL, null=True, blank=True)
+    referido_por = models.CharField(max_length=100, null=True, blank=True)
+
+    def __str__(self):
+        return f"Visita {self.ip_direccion} - {self.fecha.strftime('%d/%m/%Y %H:%M')}"

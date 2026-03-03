@@ -3,7 +3,28 @@ from django.http import JsonResponse
 import json
 from .models import Tema, Brigadista, Participacion
 
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
 def index_view(request):
+    # Registrar visita
+    ip = get_client_ip(request)
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    ref_code = request.GET.get('ref') or request.session.get('ref_code')
+    
+    from .models import Visita
+    Visita.objects.create(
+        ip_direccion=ip,
+        user_agent=user_agent,
+        ruta=request.path,
+        referido_por=ref_code
+    )
+
     temas = Tema.objects.all()
     content_map = {}
     for tema in temas:

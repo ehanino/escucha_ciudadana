@@ -48,3 +48,12 @@ class ParticipacionAdmin(admin.ModelAdmin):
 
         return response
     export_as_csv.short_description = "Exportar Seleccionados a CSV"
+
+from .models import Visita
+
+@admin.register(Visita)
+class VisitaAdmin(admin.ModelAdmin):
+    list_display = ('ip_direccion', 'fecha', 'ruta', 'referido_por')
+    list_filter = ('fecha', 'ruta')
+    search_fields = ('ip_direccion', 'referido_por')
+    readonly_fields = ('ip_direccion', 'user_agent', 'fecha', 'ruta', 'candidato', 'referido_por')
