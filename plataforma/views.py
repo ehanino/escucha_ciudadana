@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 import json
+from django.conf import settings
 from .models import Tema, Brigadista, Participacion
 
 def get_client_ip(request):
@@ -40,7 +41,8 @@ def index_view(request):
     
     context = {
         'temas': temas,
-        'content_json': json.dumps(content_map)
+        'content_json': json.dumps(content_map),
+        'GOOGLE_ANALYTICS_ID': settings.GOOGLE_ANALYTICS_ID,
     }
     return render(request, 'diagnostico/index.html', context)
 

@@ -35,6 +35,9 @@ SECRET_KEY = env('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
+# Google Analytics
+GOOGLE_ANALYTICS_ID = env('GOOGLE_ANALYTICS_ID', default=None)
+
 ALLOWED_HOSTS = ['*']
 
 

@@ -7,6 +7,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Diagnóstico Participativo | Eduardo Herrera 2026</title>
 
+    {% if GOOGLE_ANALYTICS_ID %}
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ GOOGLE_ANALYTICS_ID }}"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+
+        gtag('config', '{{ GOOGLE_ANALYTICS_ID }}');
+    </script>
+    {% endif %}
+
     <!-- Open Graph (WhatsApp, Facebook, Twitter preview) -->
     <meta property="og:title" content="Diagnóstico Participativo | Eduardo Herrera 2026" />
     <meta property="og:description" content="Plataforma ciudadana del Callao" />
