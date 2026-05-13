@@ -1,0 +1,156 @@
+{% extends 'personeros/base.html' %}
+
+{% block title %}Mi Perfil{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Mi Perfil de Personero</h1>
+  <p class="page-subtitle">
+    {% if readonly %}
+      Tu información está guardada. Gracias por registrarte.
+    {% else %}
+      Completa tus datos una sola vez. Una vez guardados, no podrás modificarlos.
+    {% endif %}
+  </p>
+</div>
+
+{% if readonly %}
+  <div class="alert alert-success">
+    ✅ Tu perfil fue completado el {{ personero.fecha_completado|date:"d/m/Y \\a\\l\\a\\s H:i" }}. Si necesitas hacer cambios, contacta a tu coordinador.
+  </div>
+{% else %}
+  <div class="alert alert-warning">
+    ⚠️ Solo podrás editar tu información <strong>una vez</strong>. Asegúrate de que todos los datos sean correctos antes de guardar.
+  </div>
+{% endif %}
+
+<div class="section-card" style="max-width:720px">
+  <div class="section-header">
+    <span class="section-title">Datos Personales (no editables)</span>
+  </div>
+  <div style="padding:24px">
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Apellido Paterno</label>
+        <div class="info-field">{{ personero.apellido_paterno }}</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Apellido Materno</label>
+        <div class="info-field">{{ personero.apellido_materno }}</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nombres</label>
+        <div class="info-field">{{ personero.nombres }}</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">DNI</label>
+        <div class="info-field" style="font-family:monospace;color:var(--jp-green);font-size:16px;font-weight:700">
+          {{ personero.dni }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section-card" style="max-width:720px;margin-top:20px">
+  <div class="section-header">
+    <span class="section-title">Datos Electorales y de Contacto</span>
+  </div>
+  <div style="padding:24px">
+    <form method="post" action="{% url 'personeros:mi_perfil' %}">
+      {% csrf_token %}
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.nro_celular.id_for_label }}">Número de Celular</label>
+          {% if readonly %}
+            <div class="info-field">{{ personero.nro_celular|default:"No registrado" }}</div>
+          {% else %}
+            {{ form.nro_celular }}
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.fecha_nacimiento.id_for_label }}">Fecha de Nacimiento</label>
+          {% if readonly %}
+            <div class="info-field">{{ personero.fecha_nacimiento|date:"d/m/Y"|default:"No registrada" }}</div>
+          {% else %}
+            {{ form.fecha_nacimiento }}
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.departamento.id_for_label }}">Departamento</label>
+          {% if readonly %}
+            <div class="info-field">{{ personero.get_departamento_display_nombre|default:"No registrado" }}</div>
+          {% else %}
+            {{ form.departamento }}
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.provincia.id_for_label }}">Provincia</label>
+          {% if readonly %}
+            <div class="info-field">{{ personero.provincia|default:"No registrada" }}</div>
+          {% else %}
+            {{ form.provincia }}
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.distrito.id_for_label }}">Distrito</label>
+          {% if readonly %}
+            <div class="info-field">{{ personero.distrito|default:"No registrado" }}</div>
+          {% else %}
+            {{ form.distrito }}
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.cargo.id_for_label }}">Cargo</label>
+          {% if readonly %}
+            <div class="info-field">{{ personero.get_cargo_display }}</div>
+          {% else %}
+            {{ form.cargo }}
+          {% endif %}
+        </div>
+
+        <div class="form-group full">
+          <label class="form-label" for="{{ form.colegio_electoral.id_for_label }}">Colegio Electoral</label>
+          {% if readonly %}
+            <div class="info-field">{{ personero.colegio_electoral|default:"No registrado" }}</div>
+          {% else %}
+            {{ form.colegio_electoral }}
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="{{ form.numero_mesa.id_for_label }}">Número de Mesa</label>
+          {% if readonly %}
+            <div class="info-field" style="font-family:monospace;font-size:18px;font-weight:700;color:var(--jp-green)">
+              {{ personero.numero_mesa|default:"No registrado" }}
+            </div>
+          {% else %}
+            {{ form.numero_mesa }}
+          {% endif %}
+        </div>
+
+      </div>
+
+      {% if not readonly %}
+        <div style="margin-top:28px;display:flex;gap:12px;align-items:center">
+          <button type="submit" class="btn btn-green" style="padding:12px 28px">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            Guardar mis datos
+          </button>
+          <span style="font-size:12px;color:var(--text-muted)">Esta acción no se puede deshacer.</span>
+        </div>
+      {% endif %}
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}

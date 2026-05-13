@@ -1,0 +1,101 @@
+{% extends 'personeros/base.html' %}
+
+{% block title %}Lista de Personeros{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Personeros</h1>
+  <p class="page-subtitle">{{ total }} resultado{{ total|pluralize }} encontrado{{ total|pluralize }}</p>
+</div>
+
+<div class="section-card">
+  <!-- Filtros -->
+  <div class="section-header">
+    <span class="section-title">Directorio Nacional</span>
+    <form method="get" class="filter-bar">
+      <input
+        type="text" name="q" value="{{ q }}"
+        class="search-input"
+        placeholder="Buscar por nombre, DNI..."
+      >
+      <select name="estado" class="select-filter">
+        <option value="">Todos los estados</option>
+        <option value="confirmado" {% if estado_sel == 'confirmado' %}selected{% endif %}>✅ Confirmado</option>
+        <option value="pendiente"  {% if estado_sel == 'pendiente'  %}selected{% endif %}>⏳ Pendiente</option>
+        <option value="retirado"   {% if estado_sel == 'retirado'   %}selected{% endif %}>❌ Retirado</option>
+      </select>
+      <select name="departamento" class="select-filter">
+        <option value="">Todos los dptos.</option>
+        {% for cod, nombre in departamentos %}
+          <option value="{{ cod }}" {% if dpto_sel == cod %}selected{% endif %}>{{ nombre }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-green" style="padding:8px 16px">Filtrar</button>
+      {% if q or estado_sel or dpto_sel %}
+        <a href="{% url 'personeros:lista' %}" class="btn btn-ghost" style="padding:8px 14px">Limpiar</a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Tabla -->
+  {% if personeros %}
+  <div style="overflow-x:auto">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Nombre Completo</th>
+          <th>DNI</th>
+          <th>Celular</th>
+          <th>Departamento</th>
+          <th>Provincia</th>
+          <th>Distrito</th>
+          <th>Colegio</th>
+          <th>Mesa</th>
+          <th>Cargo</th>
+          <th>Estado</th>
+          <th>Perfil</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in personeros %}
+        <tr>
+          <td class="td-name">{{ p.nombre_completo }}</td>
+          <td class="td-dni">{{ p.dni }}</td>
+          <td style="font-size:12px">{{ p.nro_celular|default:"—" }}</td>
+          <td style="font-size:12px">{{ p.get_departamento_display|default:"—" }}</td>
+          <td style="font-size:12px">{{ p.provincia|default:"—" }}</td>
+          <td style="font-size:12px">{{ p.distrito|default:"—" }}</td>
+          <td style="font-size:12px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            {{ p.colegio_electoral|default:"—" }}
+          </td>
+          <td style="font-size:12px;font-family:monospace">{{ p.numero_mesa|default:"—" }}</td>
+          <td>
+            <span class="badge badge-{{ p.cargo }}">{{ p.get_cargo_display }}</span>
+          </td>
+          <td>
+            <span class="badge badge-{{ p.estado }}">{{ p.get_estado_display }}</span>
+          </td>
+          <td>
+            {% if p.perfil_completado %}
+              <span style="color:var(--jp-green);font-size:18px">✓</span>
+            {% else %}
+              <span style="color:var(--text-muted);font-size:13px">Pendiente</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="padding:60px;text-align:center;color:var(--text-muted)">
+    <div style="font-size:40px;margin-bottom:12px">🔍</div>
+    <div style="font-size:15px;font-weight:600;color:var(--text-secondary)">No se encontraron personeros</div>
+    <div style="font-size:13px;margin-top:6px">Ajusta los filtros o agrega nuevos personeros</div>
+    <a href="/admin/personeros/personero/add/" class="btn btn-green" style="margin-top:20px;display:inline-flex">
+      Agregar Personero
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
