@@ -43,7 +43,7 @@ ALLOWED_HOSTS = [
     'www.juntosporelperu-callao.org.pe',
     'localhost',
     '127.0.0.1',
-    '*' # Dejamos el asterisco temporalmente para facilitar la transición, pero se recomienda quitarlo luego.
+    '*' # Dejamos el asterisco temporalmente para facilitar la transiciÃ³n, pero se recomienda quitarlo luego.
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -139,6 +139,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-# Configuraci�n para Proxy SSL (AWS Nginx)
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STATICFILES_DIRS = [
+    BASE_DIR / 'plataforma' / 'static',
+    BASE_DIR / 'personeros' / 'static',
+]
+
+# Configuración para Proxy SSL (AWS Nginx)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

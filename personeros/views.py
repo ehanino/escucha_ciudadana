@@ -4,7 +4,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db.models import Count, Q
 from django.utils import timezone
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
+from django.conf import settings
 
 from .models import Personero, PerfilUsuario, CentroVotacion, Departamento, Provincia, Distrito
 from .forms import PersoneroSelfUpdateForm, PersoneroPublicRegistrationForm
@@ -262,7 +263,7 @@ def api_resumen_view(request):
 
 def handler404_redirect(request, exception=None):
     """Redirige errores 404 al login, excepto para archivos estáticos."""
-    if request.path.startswith(settings.STATIC_URL):
+    if request.path.startswith(settings.STATIC_URL) or '/static/' in request.path:
         from django.http import HttpResponseNotFound
-        return HttpResponseNotFound("Recurso estático no encontrado.")
+        return HttpResponseNotFound("Archivo estático no encontrado.")
     return redirect('personeros:login')
