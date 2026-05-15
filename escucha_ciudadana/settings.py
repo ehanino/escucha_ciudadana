@@ -38,7 +38,18 @@ DEBUG = env('DEBUG')
 # Google Analytics
 GOOGLE_ANALYTICS_ID = env('GOOGLE_ANALYTICS_ID', default=None)
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    'juntosporelperu-callao.org.pe',
+    'www.juntosporelperu-callao.org.pe',
+    'localhost',
+    '127.0.0.1',
+    '*' # Dejamos el asterisco temporalmente para facilitar la transición, pero se recomienda quitarlo luego.
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://juntosporelperu-callao.org.pe',
+    'https://www.juntosporelperu-callao.org.pe'
+]
 
 
 # Application definition

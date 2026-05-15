@@ -6,8 +6,26 @@ from django.db.models import Count, Q
 from django.utils import timezone
 from django.http import JsonResponse
 
-from .models import Personero, PerfilUsuario, DEPARTAMENTOS
-from .forms import PersoneroSelfUpdateForm
+from .models import Personero, PerfilUsuario, CentroVotacion, Departamento, Provincia, Distrito
+from .forms import PersoneroSelfUpdateForm, PersoneroPublicRegistrationForm
+
+
+# ── Auth & Registro Público ───────────────────────────────────────────────────
+
+def registro_publico_view(request):
+    """Vista pública para que los personeros se registren ellos mismos."""
+    if request.method == 'POST':
+        form = PersoneroPublicRegistrationForm(request.POST)
+        if form.is_valid():
+            personero = form.save(commit=False)
+            personero.estado = 'pendiente'  # Por defecto queda pendiente de asignación por admin
+            personero.save()
+            messages.success(request, '¡Gracias por registrarte! Un coordinador se pondrá en contacto contigo pronto para asignarte un local.')
+            return render(request, 'personeros/registro_exitoso.html', {'personero': personero})
+    else:
+        form = PersoneroPublicRegistrationForm()
+
+    return render(request, 'personeros/registro_publico.html', {'form': form})
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -26,9 +44,9 @@ def get_personero_queryset(user):
     if not perfil or perfil.es_superadmin:
         return Personero.objects.all()
     if perfil.rol == 'coordinador_departamental' and perfil.departamento:
-        return Personero.objects.filter(departamento=perfil.departamento)
+        return Personero.objects.filter(distrito__provincia__departamento=perfil.departamento)
     if perfil.rol == 'coordinador_provincial' and perfil.provincia:
-        return Personero.objects.filter(provincia=perfil.provincia)
+        return Personero.objects.filter(distrito__provincia=perfil.provincia)
     return Personero.objects.none()
 
 
@@ -83,16 +101,15 @@ def dashboard_view(request):
     pct_completados = round((completados / total * 100) if total else 0)
 
     # Por departamento
-    dptos_dict = dict(DEPARTAMENTOS)
     por_dpto = (
-        qs.values('departamento')
+        qs.values('distrito__provincia__departamento__nombre', 'distrito__provincia__departamento__id_ubigeo')
           .annotate(total=Count('id'), confirmados=Count('id', filter=Q(estado='confirmado')))
           .order_by('-total')
     )
     por_dpto_list = [
         {
-            'codigo':      d['departamento'],
-            'nombre':      dptos_dict.get(d['departamento'], d['departamento'] or 'Sin asignar'),
+            'codigo':      d['distrito__provincia__departamento__id_ubigeo'],
+            'nombre':      d['distrito__provincia__departamento__nombre'] or 'Sin asignar',
             'total':       d['total'],
             'confirmados': d['confirmados'],
             'pct':         round(d['confirmados'] / d['total'] * 100) if d['total'] else 0,
@@ -131,7 +148,7 @@ def lista_view(request):
     # Filtros
     q          = request.GET.get('q', '')
     estado     = request.GET.get('estado', '')
-    dpto       = request.GET.get('departamento', '')
+    dpto_id    = request.GET.get('departamento', '')
 
     if q:
         qs = qs.filter(
@@ -143,16 +160,16 @@ def lista_view(request):
         )
     if estado:
         qs = qs.filter(estado=estado)
-    if dpto:
-        qs = qs.filter(departamento=dpto)
+    if dpto_id:
+        qs = qs.filter(distrito__provincia__departamento__id_ubigeo=dpto_id)
 
     context = {
         'perfil':       perfil,
         'personeros':   qs.order_by('apellido_paterno'),
-        'departamentos': DEPARTAMENTOS,
+        'departamentos': Departamento.objects.all(),
         'q':            q,
         'estado_sel':   estado,
-        'dpto_sel':     dpto,
+        'dpto_sel':     dpto_id,
         'total':        qs.count(),
     }
     return render(request, 'personeros/lista.html', context)
@@ -185,33 +202,67 @@ def mi_perfil_view(request):
     else:
         form = PersoneroSelfUpdateForm(instance=personero)
 
+    centro_preasignado = None
+    if not personero.perfil_completado and personero.centro_votacion:
+        centro_preasignado = personero.centro_votacion
+
     context = {
-        'personero': personero,
-        'form':      form,
-        'readonly':  personero.perfil_completado,
+        'personero':         personero,
+        'form':              form,
+        'readonly':          personero.perfil_completado,
+        'centro_preasignado': centro_preasignado,
     }
     return render(request, 'personeros/mi_perfil.html', context)
 
 
-# ── API: datos para el mapa ───────────────────────────────────────────────────
+# ── APIs para selectores en cascada ───────────────────────────────────────────
 
-@login_required(login_url='personeros:login')
+def api_provincias_view(request):
+    depto_id = request.GET.get('departamento')
+    if not depto_id:
+        return JsonResponse({'provincias': []})
+    provincias = Provincia.objects.filter(departamento_id=depto_id).values('id_ubigeo', 'nombre')
+    return JsonResponse({'provincias': list(provincias)})
+
+
+def api_distritos_view(request):
+    prov_id = request.GET.get('provincia')
+    if not prov_id:
+        return JsonResponse({'distritos': []})
+    distritos = Distrito.objects.filter(provincia_id=prov_id).values('id_ubigeo', 'nombre')
+    return JsonResponse({'distritos': list(distritos)})
+
+
+def api_centros_view(request):
+    dist_id = request.GET.get('distrito')
+    if not dist_id:
+        return JsonResponse({'centros': []})
+    centros = CentroVotacion.objects.filter(distrito_id=dist_id).values('id', 'nombre', 'direccion')
+    return JsonResponse({'centros': list(centros)})
+
+
 def api_resumen_view(request):
     qs = get_personero_queryset(request.user)
-    dptos_dict = dict(DEPARTAMENTOS)
-
     por_dpto = (
-        qs.values('departamento')
+        qs.values('distrito__provincia__departamento__nombre', 'distrito__provincia__departamento__id_ubigeo')
           .annotate(total=Count('id'), confirmados=Count('id', filter=Q(estado='confirmado')))
     )
     data = [
         {
-            'codigo':      d['departamento'],
-            'nombre':      dptos_dict.get(d['departamento'], 'Sin asignar'),
+            'codigo':      d['distrito__provincia__departamento__id_ubigeo'],
+            'nombre':      d['distrito__provincia__departamento__nombre'] or 'Sin asignar',
             'total':       d['total'],
             'confirmados': d['confirmados'],
             'pct':         round(d['confirmados'] / d['total'] * 100) if d['total'] else 0,
         }
-        for d in por_dpto if d['departamento']
+        for d in por_dpto if d['distrito__provincia__departamento__id_ubigeo']
     ]
     return JsonResponse({'departamentos': data})
+
+
+def handler404_redirect(request, exception=None):
+    """Redirige errores 404 al login, excepto para archivos estáticos."""
+    if request.path.startswith(settings.STATIC_URL):
+        from django.http import HttpResponseNotFound
+        return HttpResponseNotFound("Recurso estático no encontrado.")
+    return redirect('personeros:login')

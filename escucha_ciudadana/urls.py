@@ -22,3 +22,5 @@ urlpatterns = [
     path('', include('plataforma.urls')),
     path('personeros/', include('personeros.urls', namespace='personeros')),
 ]
+
+handler404 = 'personeros.views.handler404_redirect'

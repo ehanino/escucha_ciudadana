@@ -12,6 +12,24 @@ def get_client_ip(request):
         ip = request.META.get('REMOTE_ADDR')
     return ip
 
+def bienvenida_view(request):
+    # Registrar visita (igual que en el índice para consistencia)
+    ip = get_client_ip(request)
+    user_agent = request.META.get('HTTP_USER_AGENT', '')
+    ref_code = request.GET.get('ref') or request.session.get('ref_code')
+    
+    from .models import Visita
+    Visita.objects.create(
+        ip_direccion=ip,
+        user_agent=user_agent,
+        ruta=request.path,
+        referido_por=ref_code
+    )
+    
+    return render(request, 'plataforma/bienvenida.html', {
+        'GOOGLE_ANALYTICS_ID': settings.GOOGLE_ANALYTICS_ID,
+    })
+
 def index_view(request):
     # Registrar visita
     ip = get_client_ip(request)

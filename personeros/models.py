@@ -4,18 +4,6 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 
-DEPARTAMENTOS = [
-    ('AMA', 'Amazonas'), ('ANC', 'Áncash'), ('APU', 'Apurímac'),
-    ('ARE', 'Arequipa'), ('AYA', 'Ayacucho'), ('CAJ', 'Cajamarca'),
-    ('CAL', 'Callao'), ('CUS', 'Cusco'), ('HUV', 'Huancavelica'),
-    ('HUA', 'Huánuco'), ('ICA', 'Ica'), ('JUN', 'Junín'),
-    ('LAL', 'La Libertad'), ('LAM', 'Lambayeque'), ('LIM', 'Lima'),
-    ('LOR', 'Loreto'), ('MDM', 'Madre de Dios'), ('MOQ', 'Moquegua'),
-    ('PAS', 'Pasco'), ('PIU', 'Piura'), ('PUN', 'Puno'),
-    ('SAM', 'San Martín'), ('TAC', 'Tacna'), ('TUM', 'Tumbes'),
-    ('UCA', 'Ucayali'),
-]
-
 ROLES = [
     ('superadmin', 'Super Administrador'),
     ('coordinador_departamental', 'Coordinador Departamental'),
@@ -23,6 +11,93 @@ ROLES = [
     ('visor', 'Visor (Solo Lectura)'),
     ('personero', 'Personero'),
 ]
+
+
+# ── Modelos de Ubicación (UBIGEO) ─────────────────────────────────────────────
+
+class Departamento(models.Model):
+    id_ubigeo = models.CharField(max_length=2, primary_key=True, verbose_name='Código UBIGEO')
+    nombre    = models.CharField(max_length=100, verbose_name='Nombre')
+
+    class Meta:
+        verbose_name        = 'Departamento'
+        verbose_name_plural = 'Departamentos'
+        ordering            = ['nombre']
+
+    def save(self, *args, **kwargs):
+        if self.nombre:
+            self.nombre = self.nombre.upper()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.nombre
+
+
+class Provincia(models.Model):
+    id_ubigeo    = models.CharField(max_length=4, primary_key=True, verbose_name='Código UBIGEO')
+    nombre       = models.CharField(max_length=100, verbose_name='Nombre')
+    departamento = models.ForeignKey(Departamento, on_delete=models.CASCADE, related_name='provincias')
+
+    class Meta:
+        verbose_name        = 'Provincia'
+        verbose_name_plural = 'Provincias'
+        ordering            = ['nombre']
+
+    def save(self, *args, **kwargs):
+        if self.nombre:
+            self.nombre = self.nombre.upper()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.departamento.nombre})"
+
+
+class Distrito(models.Model):
+    id_ubigeo = models.CharField(max_length=6, primary_key=True, verbose_name='Código UBIGEO')
+    nombre    = models.CharField(max_length=100, verbose_name='Nombre')
+    provincia = models.ForeignKey(Provincia, on_delete=models.CASCADE, related_name='distritos')
+
+    class Meta:
+        verbose_name        = 'Distrito'
+        verbose_name_plural = 'Distritos'
+        ordering            = ['nombre']
+
+    def save(self, *args, **kwargs):
+        if self.nombre:
+            self.nombre = self.nombre.upper()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.provincia.nombre})"
+
+
+class CentroVotacion(models.Model):
+    """Local de votación importado del padrón ONPE."""
+    distrito  = models.ForeignKey(Distrito, on_delete=models.SET_NULL, null=True, blank=True, related_name='centros')
+    nombre    = models.CharField(max_length=300, verbose_name='Centro de Votación')
+    direccion = models.CharField(max_length=300, blank=True, verbose_name='Dirección')
+
+    class Meta:
+        verbose_name        = 'Centro de Votación'
+        verbose_name_plural = 'Centros de Votación'
+        ordering            = ['distrito', 'nombre']
+        unique_together     = ('nombre', 'distrito')
+
+    def __str__(self):
+        return f"{self.nombre} — {self.distrito.nombre if self.distrito else 'Sin distrito'}"
+
+    def save(self, *args, **kwargs):
+        if self.nombre:
+            self.nombre = self.nombre.upper()
+        if self.direccion:
+            self.direccion = self.direccion.upper()
+        super().save(*args, **kwargs)
+
+    @property
+    def nombre_con_direccion(self):
+        if self.direccion:
+            return f"{self.nombre} | {self.direccion}"
+        return self.nombre
 
 
 class Personero(models.Model):
@@ -46,17 +121,20 @@ class Personero(models.Model):
     fecha_creacion   = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Registro')
 
     # ── Ubicación ────────────────────────────────────────────────
-    departamento = models.CharField(max_length=3, choices=DEPARTAMENTOS, blank=True, verbose_name='Departamento')
-    provincia    = models.CharField(max_length=100, blank=True, verbose_name='Provincia')
-    distrito     = models.CharField(max_length=100, blank=True, verbose_name='Distrito')
+    # Se vincula directamente al distrito para mayor precisión
+    distrito = models.ForeignKey(Distrito, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Distrito')
 
     # ── Mesa electoral ───────────────────────────────────────────
-    colegio_electoral = models.CharField(max_length=200, blank=True, verbose_name='Colegio Electoral')
+    centro_votacion   = models.ForeignKey(
+        'CentroVotacion', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='personeros',
+        verbose_name='Centro de Votación'
+    )
     numero_mesa       = models.CharField(max_length=10, blank=True, verbose_name='Nro. de Mesa')
     cargo             = models.CharField(max_length=10, choices=CARGO_CHOICES, default='titular', verbose_name='Cargo')
 
     # ── Estado y gestión ─────────────────────────────────────────
-    estado        = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='pendiente', verbose_name='Estado')
+    estado        = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='confirmado', verbose_name='Estado')
     observaciones = models.TextField(blank=True, verbose_name='Observaciones')
 
     # ── Control de auto-actualización única ──────────────────────
@@ -83,23 +161,31 @@ class Personero(models.Model):
         return f"{self.nombres} {self.apellido_paterno} {self.apellido_materno}"
 
     @property
-    def get_departamento_display_nombre(self):
-        return dict(DEPARTAMENTOS).get(self.departamento, self.departamento)
+    def departamento(self):
+        return self.distrito.provincia.departamento if self.distrito else None
+
+    @property
+    def provincia(self):
+        return self.distrito.provincia if self.distrito else None
+
+    def save(self, *args, **kwargs):
+        if self.apellido_paterno:
+            self.apellido_paterno = self.apellido_paterno.upper()
+        if self.apellido_materno:
+            self.apellido_materno = self.apellido_materno.upper()
+        if self.nombres:
+            self.nombres = self.nombres.upper()
+        if self.observaciones:
+            self.observaciones = self.observaciones.upper()
+        super().save(*args, **kwargs)
 
 
 class PerfilUsuario(models.Model):
     usuario      = models.OneToOneField(User, on_delete=models.CASCADE, related_name='perfil')
     rol          = models.CharField(max_length=30, choices=ROLES, default='visor', verbose_name='Rol')
-    departamento = models.CharField(
-        max_length=3, choices=DEPARTAMENTOS, blank=True, null=True,
-        verbose_name='Departamento asignado',
-        help_text='Solo para coordinadores departamentales'
-    )
-    provincia = models.CharField(
-        max_length=100, blank=True, null=True,
-        verbose_name='Provincia asignada',
-        help_text='Solo para coordinadores provinciales'
-    )
+    departamento = models.ForeignKey(Departamento, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Departamento asignado')
+    provincia    = models.ForeignKey(Provincia, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Provincia asignada')
+    distrito     = models.ForeignKey(Distrito, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Distrito asignado')
 
     class Meta:
         verbose_name        = 'Perfil de Usuario'

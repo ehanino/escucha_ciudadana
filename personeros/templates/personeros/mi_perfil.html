@@ -2,6 +2,81 @@
 
 {% block title %}Mi Perfil{% endblock %}
 
+{% block extra_head %}
+<style>
+  /* ── Tarjeta de centro pre-asignado ──────────────────────────── */
+  .centro-card {
+    background: linear-gradient(135deg, rgba(57,181,74,.12) 0%, rgba(57,181,74,.04) 100%);
+    border: 1px solid rgba(57,181,74,.35);
+    border-radius: 12px;
+    padding: 18px 22px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 4px;
+  }
+  .centro-card-icon {
+    width: 42px; height: 42px; flex-shrink: 0;
+    background: rgba(57,181,74,.2);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .centro-card-title {
+    font-size: 13px; font-weight: 600;
+    color: var(--jp-green, #39B54A);
+    text-transform: uppercase; letter-spacing: .5px;
+    margin-bottom: 4px;
+  }
+  .centro-card-nombre {
+    font-size: 15px; font-weight: 700;
+    color: var(--text-primary, #fff);
+    line-height: 1.3;
+  }
+  .centro-card-dir {
+    font-size: 12px; color: var(--text-muted, #94a3b8);
+    margin-top: 4px;
+  }
+  .centro-card-badge {
+    font-size: 10px; font-weight: 700;
+    background: rgba(57,181,74,.25); color: var(--jp-green,#39B54A);
+    border-radius: 20px; padding: 2px 10px; display: inline-block;
+    margin-top: 6px; letter-spacing: .5px;
+  }
+
+  /* ── Selector en cascada ─────────────────────────────────────── */
+  .cascada-wrapper { position: relative; }
+  .cascada-loading {
+    display: none;
+    position: absolute; right: 14px; top: 50%;
+    transform: translateY(-50%);
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,.2);
+    border-top-color: var(--jp-green, #39B54A);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+  #id_centro_votacion option { padding: 6px; }
+  .hint-text {
+    font-size: 11px; color: var(--text-muted,#94a3b8);
+    margin-top: 4px; display: block;
+  }
+
+  /* ── Dirección del centro seleccionado ───────────────────────── */
+  #centro-direccion-preview {
+    display: none;
+    font-size: 12px; color: var(--text-muted,#94a3b8);
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-top: 6px;
+  }
+  #centro-direccion-preview.visible { display: block; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
   <h1 class="page-title">Mi Perfil de Personero</h1>
@@ -16,7 +91,7 @@
 
 {% if readonly %}
   <div class="alert alert-success">
-    ✅ Tu perfil fue completado el {{ personero.fecha_completado|date:"d/m/Y \\a\\l\\a\\s H:i" }}. Si necesitas hacer cambios, contacta a tu coordinador.
+    ✅ Tu perfil fue completado el {{ personero.fecha_completado|date:"d/m/Y \a\l\a\s H:i" }}. Si necesitas hacer cambios, contacta a tu coordinador.
   </div>
 {% else %}
   <div class="alert alert-warning">
@@ -24,6 +99,7 @@
   </div>
 {% endif %}
 
+<!-- ── Datos Personales (solo lectura) ───────────────────────── -->
 <div class="section-card" style="max-width:720px">
   <div class="section-header">
     <span class="section-title">Datos Personales (no editables)</span>
@@ -52,15 +128,17 @@
   </div>
 </div>
 
+<!-- ── Datos Electorales ─────────────────────────────────────── -->
 <div class="section-card" style="max-width:720px;margin-top:20px">
   <div class="section-header">
     <span class="section-title">Datos Electorales y de Contacto</span>
   </div>
   <div style="padding:24px">
-    <form method="post" action="{% url 'personeros:mi_perfil' %}">
+    <form method="post" action="{% url 'personeros:mi_perfil' %}" id="perfil-form">
       {% csrf_token %}
       <div class="form-grid">
 
+        <!-- Celular -->
         <div class="form-group">
           <label class="form-label" for="{{ form.nro_celular.id_for_label }}">Número de Celular</label>
           {% if readonly %}
@@ -70,6 +148,7 @@
           {% endif %}
         </div>
 
+        <!-- Fecha de Nacimiento -->
         <div class="form-group">
           <label class="form-label" for="{{ form.fecha_nacimiento.id_for_label }}">Fecha de Nacimiento</label>
           {% if readonly %}
@@ -79,6 +158,7 @@
           {% endif %}
         </div>
 
+        <!-- Departamento -->
         <div class="form-group">
           <label class="form-label" for="{{ form.departamento.id_for_label }}">Departamento</label>
           {% if readonly %}
@@ -88,6 +168,7 @@
           {% endif %}
         </div>
 
+        <!-- Provincia -->
         <div class="form-group">
           <label class="form-label" for="{{ form.provincia.id_for_label }}">Provincia</label>
           {% if readonly %}
@@ -97,15 +178,7 @@
           {% endif %}
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="{{ form.distrito.id_for_label }}">Distrito</label>
-          {% if readonly %}
-            <div class="info-field">{{ personero.distrito|default:"No registrado" }}</div>
-          {% else %}
-            {{ form.distrito }}
-          {% endif %}
-        </div>
-
+        <!-- Cargo -->
         <div class="form-group">
           <label class="form-label" for="{{ form.cargo.id_for_label }}">Cargo</label>
           {% if readonly %}
@@ -115,15 +188,7 @@
           {% endif %}
         </div>
 
-        <div class="form-group full">
-          <label class="form-label" for="{{ form.colegio_electoral.id_for_label }}">Colegio Electoral</label>
-          {% if readonly %}
-            <div class="info-field">{{ personero.colegio_electoral|default:"No registrado" }}</div>
-          {% else %}
-            {{ form.colegio_electoral }}
-          {% endif %}
-        </div>
-
+        <!-- Número de Mesa -->
         <div class="form-group">
           <label class="form-label" for="{{ form.numero_mesa.id_for_label }}">Número de Mesa</label>
           {% if readonly %}
@@ -135,11 +200,85 @@
           {% endif %}
         </div>
 
+        <!-- ── Distrito + Centro de Votación (en cascada) ──────── -->
+        {% if readonly %}
+          <!-- Modo solo lectura: mostrar datos guardados -->
+          <div class="form-group">
+            <label class="form-label">Distrito</label>
+            <div class="info-field">{{ personero.distrito|default:"No registrado" }}</div>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label">Centro de Votación</label>
+            {% if personero.centro_votacion %}
+              <div class="centro-card">
+                <div class="centro-card-icon">🏫</div>
+                <div>
+                  <div class="centro-card-title">Centro asignado</div>
+                  <div class="centro-card-nombre">{{ personero.centro_votacion.nombre }}</div>
+                  {% if personero.centro_votacion.direccion %}
+                    <div class="centro-card-dir">📍 {{ personero.centro_votacion.direccion }}</div>
+                  {% endif %}
+                  <span class="centro-card-badge">{{ personero.centro_votacion.distrito }}</span>
+                </div>
+              </div>
+            {% else %}
+              <div class="info-field">No registrado</div>
+            {% endif %}
+          </div>
+
+        {% else %}
+          <!-- Modo edición -->
+
+          {% if centro_preasignado %}
+            <!-- ── Centro pre-asignado por coordinador ─────────── -->
+            <div class="form-group full">
+              <label class="form-label">Centro de Votación</label>
+              <div class="centro-card">
+                <div class="centro-card-icon">🏫</div>
+                <div>
+                  <div class="centro-card-title">Centro pre-asignado por tu coordinador</div>
+                  <div class="centro-card-nombre">{{ centro_preasignado.nombre }}</div>
+                  {% if centro_preasignado.direccion %}
+                    <div class="centro-card-dir">📍 {{ centro_preasignado.direccion }}</div>
+                  {% endif %}
+                  <span class="centro-card-badge">{{ centro_preasignado.distrito }}</span>
+                </div>
+              </div>
+              <!-- Campo oculto para enviar el valor en el POST -->
+              <input type="hidden" name="centro_votacion" value="{{ centro_preasignado.id }}">
+              <input type="hidden" name="distrito" value="{{ centro_preasignado.distrito }}">
+            </div>
+
+          {% else %}
+            <!-- ── Selector en cascada: Distrito → Centro ─────── -->
+            <div class="form-group">
+              <label class="form-label" for="id_distrito">Distrito</label>
+              {{ form.distrito }}
+              <span class="hint-text">Selecciona primero el distrito para ver los centros disponibles.</span>
+            </div>
+
+            <div class="form-group full">
+              <label class="form-label" for="id_centro_votacion">Centro de Votación</label>
+              <div class="cascada-wrapper">
+                <select name="centro_votacion" id="id_centro_votacion" class="form-input" disabled>
+                  <option value="">— Primero selecciona un distrito —</option>
+                </select>
+                <div class="cascada-loading" id="centros-spinner"></div>
+              </div>
+              <div id="centro-direccion-preview"></div>
+              <span class="hint-text">El centro se carga automáticamente al elegir el distrito.</span>
+            </div>
+          {% endif %}
+
+        {% endif %}
+        <!-- ── fin bloque distrito/centro ───────────────────────── -->
+
       </div>
 
       {% if not readonly %}
         <div style="margin-top:28px;display:flex;gap:12px;align-items:center">
-          <button type="submit" class="btn btn-green" style="padding:12px 28px">
+          <button type="submit" class="btn btn-green" style="padding:12px 28px" id="btn-guardar">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:16px;height:16px">
               <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
             </svg>
@@ -153,4 +292,85 @@
   </div>
 </div>
 
+{% endblock %}
+
+{% block extra_scripts %}
+{% if not readonly and not centro_preasignado %}
+<script>
+(function () {
+  'use strict';
+
+  const API_CENTROS   = "{% url 'personeros:api_centros' %}";
+  const selDistrito   = document.getElementById('id_distrito');
+  const selCentro     = document.getElementById('id_centro_votacion');
+  const spinner       = document.getElementById('centros-spinner');
+  const preview       = document.getElementById('centro-direccion-preview');
+
+  // Valor inicial (si el form regresa con error de validación)
+  const valorInicial  = "{{ form.centro_votacion.value|default:'' }}";
+
+  async function cargarCentros(distrito) {
+    if (!distrito) {
+      selCentro.innerHTML = '<option value="">— Primero selecciona un distrito —</option>';
+      selCentro.disabled  = true;
+      preview.classList.remove('visible');
+      return;
+    }
+
+    // Mostrar spinner
+    spinner.style.display = 'block';
+    selCentro.disabled = true;
+    selCentro.innerHTML = '<option value="">Cargando centros…</option>';
+    preview.classList.remove('visible');
+
+    try {
+      const res  = await fetch(`${API_CENTROS}?distrito=${encodeURIComponent(distrito)}`);
+      const data = await res.json();
+
+      if (!data.centros || data.centros.length === 0) {
+        selCentro.innerHTML = '<option value="">— Sin centros en este distrito —</option>';
+        return;
+      }
+
+      // Construir opciones
+      let html = '<option value="">— Selecciona tu centro de votación —</option>';
+      data.centros.forEach(c => {
+        const sel = (String(c.id) === valorInicial) ? ' selected' : '';
+        html += `<option value="${c.id}" data-dir="${c.direccion}"${sel}>${c.nombre}</option>`;
+      });
+      selCentro.innerHTML = html;
+      selCentro.disabled  = false;
+
+      // Mostrar dirección si hay un valor pre-seleccionado
+      actualizarPreview();
+
+    } catch (e) {
+      selCentro.innerHTML = '<option value="">Error cargando centros</option>';
+      console.error('Error al cargar centros:', e);
+    } finally {
+      spinner.style.display = 'none';
+    }
+  }
+
+  function actualizarPreview() {
+    const opt = selCentro.options[selCentro.selectedIndex];
+    if (opt && opt.dataset.dir) {
+      preview.textContent  = '📍 ' + opt.dataset.dir;
+      preview.classList.add('visible');
+    } else {
+      preview.classList.remove('visible');
+    }
+  }
+
+  // Eventos
+  selDistrito.addEventListener('change', () => cargarCentros(selDistrito.value));
+  selCentro.addEventListener('change', actualizarPreview);
+
+  // Al cargar la página: si ya hay un distrito seleccionado (vuelta tras error), recargar centros
+  if (selDistrito.value) {
+    cargarCentros(selDistrito.value);
+  }
+})();
+</script>
+{% endif %}
 {% endblock %}

@@ -26,8 +26,8 @@
       </select>
       <select name="departamento" class="select-filter">
         <option value="">Todos los dptos.</option>
-        {% for cod, nombre in departamentos %}
-          <option value="{{ cod }}" {% if dpto_sel == cod %}selected{% endif %}>{{ nombre }}</option>
+        {% for dpto in departamentos %}
+          <option value="{{ dpto.id_ubigeo }}" {% if dpto_sel == dpto.id_ubigeo %}selected{% endif %}>{{ dpto.nombre }}</option>
         {% endfor %}
       </select>
       <button type="submit" class="btn btn-green" style="padding:8px 16px">Filtrar</button>
@@ -49,7 +49,7 @@
           <th>Departamento</th>
           <th>Provincia</th>
           <th>Distrito</th>
-          <th>Colegio</th>
+          <th>Centro de Votación</th>
           <th>Mesa</th>
           <th>Cargo</th>
           <th>Estado</th>
@@ -62,11 +62,11 @@
           <td class="td-name">{{ p.nombre_completo }}</td>
           <td class="td-dni">{{ p.dni }}</td>
           <td style="font-size:12px">{{ p.nro_celular|default:"—" }}</td>
-          <td style="font-size:12px">{{ p.get_departamento_display|default:"—" }}</td>
-          <td style="font-size:12px">{{ p.provincia|default:"—" }}</td>
-          <td style="font-size:12px">{{ p.distrito|default:"—" }}</td>
+          <td style="font-size:12px">{{ p.departamento.nombre|default:"—" }}</td>
+          <td style="font-size:12px">{{ p.provincia.nombre|default:"—" }}</td>
+          <td style="font-size:12px">{{ p.distrito.nombre|default:"—" }}</td>
           <td style="font-size:12px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-            {{ p.colegio_electoral|default:"—" }}
+            {{ p.centro_votacion.nombre|default:"—" }}
           </td>
           <td style="font-size:12px;font-family:monospace">{{ p.numero_mesa|default:"—" }}</td>
           <td>

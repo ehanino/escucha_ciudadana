@@ -1,14 +1,43 @@
 from django import forms
-from .models import Personero, DEPARTAMENTOS
+from .models import Personero, CentroVotacion, Departamento, Provincia, Distrito
 
 
 class PersoneroSelfUpdateForm(forms.ModelForm):
-    """Formulario que el personero completa una sola vez."""
+    """Formulario que el personero completa una sola vez con ubicación normalizada."""
+
+    # Campos virtuales para la cascada (no están en el modelo Personero directamente)
+    departamento = forms.ModelChoiceField(
+        queryset=Departamento.objects.all(),
+        required=False,
+        label='Departamento',
+        widget=forms.Select(attrs={'class': 'form-input', 'id': 'id_departamento'})
+    )
+    provincia = forms.ModelChoiceField(
+        queryset=Provincia.objects.none(),
+        required=False,
+        label='Provincia',
+        widget=forms.Select(attrs={'class': 'form-input', 'id': 'id_provincia'})
+    )
 
     fecha_nacimiento = forms.DateField(
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-input'}),
         required=False,
-        label='Fecha de Nacimiento'
+        label='Fecha de Nacimiento',
+    )
+
+    distrito = forms.ModelChoiceField(
+        queryset=Distrito.objects.none(),
+        required=False,
+        label='Distrito',
+        widget=forms.Select(attrs={'class': 'form-input', 'id': 'id_distrito'})
+    )
+
+    centro_votacion = forms.ModelChoiceField(
+        queryset=CentroVotacion.objects.none(),
+        required=False,
+        empty_label='— Selecciona tu centro de votación —',
+        label='Centro de Votación',
+        widget=forms.Select(attrs={'class': 'form-input', 'id': 'id_centro_votacion'}),
     )
 
     class Meta:
@@ -19,25 +48,188 @@ class PersoneroSelfUpdateForm(forms.ModelForm):
             'departamento',
             'provincia',
             'distrito',
-            'colegio_electoral',
+            'centro_votacion',
             'numero_mesa',
             'cargo',
         ]
         widgets = {
-            'nro_celular':        forms.TextInput(attrs={'class': 'form-input', 'placeholder': '9XXXXXXXX'}),
-            'departamento':       forms.Select(attrs={'class': 'form-input'}),
-            'provincia':          forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Ej: Lima'}),
-            'distrito':           forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Ej: Miraflores'}),
-            'colegio_electoral':  forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Nombre del colegio electoral'}),
-            'numero_mesa':        forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Ej: 0045'}),
-            'cargo':              forms.Select(attrs={'class': 'form-input'}),
+            'nro_celular':  forms.TextInput(attrs={'class': 'form-input', 'placeholder': '9XXXXXXXX'}),
+            'numero_mesa':  forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Ej: 0045'}),
+            'cargo':        forms.Select(attrs={'class': 'form-input'}),
         }
-        labels = {
-            'nro_celular':       'Número de Celular',
-            'departamento':      'Departamento',
-            'provincia':         'Provincia',
-            'distrito':          'Distrito',
-            'colegio_electoral': 'Colegio Electoral',
-            'numero_mesa':       'Número de Mesa',
-            'cargo':             'Cargo',
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        instance = kwargs.get('instance')
+
+        # Si ya hay datos (ej: vuelta tras error de validación o ya guardado)
+        if instance and instance.distrito:
+            self.fields['distrito'].queryset = Distrito.objects.filter(provincia=instance.distrito.provincia)
+            self.fields['provincia'].queryset = Provincia.objects.filter(departamento=instance.distrito.provincia.departamento)
+            self.fields['departamento'].initial = instance.distrito.provincia.departamento
+            self.fields['provincia'].initial = instance.distrito.provincia
+            self.fields['centro_votacion'].queryset = CentroVotacion.objects.filter(distrito=instance.distrito)
+
+        # Si el POST trae datos de ubicación, poblar los querysets para que la validación pase
+        if self.data.get('departamento'):
+            try:
+                depto_id = self.data.get('departamento')
+                self.fields['provincia'].queryset = Provincia.objects.filter(departamento_id=depto_id)
+            except (ValueError, TypeError):
+                pass
+        if self.data.get('provincia'):
+            try:
+                prov_id = self.data.get('provincia')
+                self.fields['distrito'].queryset = Distrito.objects.filter(provincia_id=prov_id)
+            except (ValueError, TypeError):
+                pass
+        if self.data.get('distrito'):
+            try:
+                dist_id = self.data.get('distrito')
+                self.fields['centro_votacion'].queryset = CentroVotacion.objects.filter(distrito_id=dist_id)
+            except (ValueError, TypeError):
+                pass
+
+
+class CentroVotacionAdminForm(forms.ModelForm):
+    departamento = forms.ModelChoiceField(
+        queryset=Departamento.objects.all(),
+        required=False,
+        label='Departamento',
+        widget=forms.Select(attrs={'id': 'id_departamento'})
+    )
+    provincia = forms.ModelChoiceField(
+        queryset=Provincia.objects.none(),
+        required=False,
+        label='Provincia',
+        widget=forms.Select(attrs={'id': 'id_provincia'})
+    )
+    distrito = forms.ModelChoiceField(
+        queryset=Distrito.objects.none(),
+        required=True,
+        label='Distrito',
+        widget=forms.Select(attrs={'id': 'id_distrito'})
+    )
+
+    class Meta:
+        model = CentroVotacion
+        fields = ['departamento', 'provincia', 'distrito', 'nombre', 'direccion']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        instance = kwargs.get('instance')
+        if instance and instance.distrito:
+            self.fields['distrito'].queryset = Distrito.objects.filter(provincia=instance.distrito.provincia)
+            self.fields['provincia'].queryset = Provincia.objects.filter(departamento=instance.distrito.provincia.departamento)
+            self.fields['departamento'].initial = instance.distrito.provincia.departamento
+            self.fields['provincia'].initial = instance.distrito.provincia
+
+        if self.data.get('departamento'):
+            self.fields['provincia'].queryset = Provincia.objects.filter(departamento_id=self.data.get('departamento'))
+        if self.data.get('provincia'):
+            self.fields['distrito'].queryset = Distrito.objects.filter(provincia_id=self.data.get('provincia'))
+
+
+class PersoneroAdminForm(forms.ModelForm):
+    departamento = forms.ModelChoiceField(
+        queryset=Departamento.objects.all(),
+        required=False,
+        label='Departamento',
+        widget=forms.Select(attrs={'id': 'id_departamento'})
+    )
+    provincia = forms.ModelChoiceField(
+        queryset=Provincia.objects.none(),
+        required=False,
+        label='Provincia',
+        widget=forms.Select(attrs={'id': 'id_provincia'})
+    )
+    distrito = forms.ModelChoiceField(
+        queryset=Distrito.objects.none(),
+        required=False,
+        label='Distrito',
+        widget=forms.Select(attrs={'id': 'id_distrito'})
+    )
+    centro_votacion = forms.ModelChoiceField(
+        queryset=CentroVotacion.objects.none(),
+        required=False,
+        label='Centro de Votación',
+        widget=forms.Select(attrs={'id': 'id_centro_votacion'})
+    )
+
+    class Meta:
+        model = Personero
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        instance = kwargs.get('instance')
+        if instance and instance.distrito:
+            self.fields['distrito'].queryset = Distrito.objects.filter(provincia=instance.distrito.provincia)
+            self.fields['provincia'].queryset = Provincia.objects.filter(departamento=instance.distrito.provincia.departamento)
+            self.fields['departamento'].initial = instance.distrito.provincia.departamento
+            self.fields['provincia'].initial = instance.distrito.provincia
+            if instance.centro_votacion:
+                self.fields['centro_votacion'].queryset = CentroVotacion.objects.filter(distrito=instance.distrito)
+
+        if self.data.get('departamento'):
+            self.fields['provincia'].queryset = Provincia.objects.filter(departamento_id=self.data.get('departamento'))
+        if self.data.get('provincia'):
+            self.fields['distrito'].queryset = Distrito.objects.filter(provincia_id=self.data.get('provincia'))
+        if self.data.get('distrito'):
+            self.fields['centro_votacion'].queryset = CentroVotacion.objects.filter(distrito_id=self.data.get('distrito'))
+
+
+class PersoneroPublicRegistrationForm(forms.ModelForm):
+    departamento = forms.ModelChoiceField(
+        queryset=Departamento.objects.all(),
+        required=True,
+        label='Departamento',
+        widget=forms.Select(attrs={'id': 'id_departamento', 'class': 'form-input'})
+    )
+    provincia = forms.ModelChoiceField(
+        queryset=Provincia.objects.none(),
+        required=True,
+        label='Provincia',
+        widget=forms.Select(attrs={'id': 'id_provincia', 'class': 'form-input'})
+    )
+    distrito = forms.ModelChoiceField(
+        queryset=Distrito.objects.none(),
+        required=True,
+        label='Distrito',
+        widget=forms.Select(attrs={'id': 'id_distrito', 'class': 'form-input'})
+    )
+
+    fecha_nacimiento = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-input'}),
+        required=True,
+        label='Fecha de Nacimiento',
+    )
+
+    class Meta:
+        model = Personero
+        fields = [
+            'apellido_paterno', 'apellido_materno', 'nombres', 'dni',
+            'fecha_nacimiento', 'nro_celular', 'departamento', 'provincia', 'distrito'
+        ]
+        widgets = {
+            'apellido_paterno': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Apellido Paterno'}),
+            'apellido_materno': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Apellido Materno'}),
+            'nombres':          forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Nombres'}),
+            'dni':              forms.TextInput(attrs={'class': 'form-input', 'placeholder': '8 dígitos'}),
+            'nro_celular':      forms.TextInput(attrs={'class': 'form-input', 'placeholder': '9XXXXXXXX'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.data.get('departamento'):
+            self.fields['provincia'].queryset = Provincia.objects.filter(departamento_id=self.data.get('departamento'))
+        if self.data.get('provincia'):
+            self.fields['distrito'].queryset = Distrito.objects.filter(provincia_id=self.data.get('provincia'))
+
+    def clean_dni(self):
+        dni = self.cleaned_data.get('dni')
+        if not dni.isdigit() or len(dni) != 8:
+            raise forms.ValidationError('El DNI debe tener exactamente 8 dígitos.')
+        if Personero.objects.filter(dni=dni).exists():
+            raise forms.ValidationError('Este DNI ya está registrado en el sistema.')
+        return dni
