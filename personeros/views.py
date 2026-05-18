@@ -21,12 +21,21 @@ def registro_publico_view(request):
             personero = form.save(commit=False)
             personero.estado = 'pendiente'  # Por defecto queda pendiente de asignación por admin
             personero.save()
+            
+            # Si el usuario que está registrando ya está autenticado (admin/coordinador),
+            # lo redirigimos de vuelta al listado de personeros con un mensaje de éxito.
+            if request.user.is_authenticated:
+                messages.success(request, f'¡Personero {personero.nombre_completo} registrado exitosamente!')
+                return redirect('personeros:lista')
+                
             messages.success(request, '¡Gracias por registrarte! Un coordinador se pondrá en contacto contigo pronto para asignarte un local.')
             return render(request, 'personeros/registro_exitoso.html', {'personero': personero})
     else:
         form = PersoneroPublicRegistrationForm()
 
-    return render(request, 'personeros/registro_publico.html', {'form': form})
+    # Si es administrador, cargamos el formulario dentro del diseño del panel con menú lateral
+    template_name = 'personeros/registro_admin.html' if request.user.is_authenticated else 'personeros/registro_publico.html'
+    return render(request, template_name, {'form': form})
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -78,7 +87,7 @@ def _redirect_after_login(user):
 
 def logout_view(request):
     logout(request)
-    return redirect('personeros:login')
+    return redirect('bienvenida')
 
 
 # ── Dashboard (coordinadores / admin) ─────────────────────────────────────────

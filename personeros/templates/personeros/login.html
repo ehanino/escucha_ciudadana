@@ -14,8 +14,10 @@
   <div class="login-wrap">
     <div class="login-card">
 
-      <div class="login-logo">
-        <img src="{% static 'images/JuntosPorElPeru.png' %}" alt="Juntos por el Perú">
+      <div class="login-logo" style="text-align: center; margin-bottom: 20px;">
+        <a href="{% url 'bienvenida' %}" style="display: inline-block; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          <img src="{% static 'images/JuntosPorElPeru.png' %}" alt="Juntos por el Perú" style="height: 60px; width: auto;">
+        </a>
       </div>
 
       <h1 class="login-title">Sistema de Personeros</h1>
@@ -44,9 +46,7 @@
           <label class="form-label" for="id_password">Contraseña</label>
           <input id="id_password" type="password" name="password" class="form-input" placeholder="Ingresa tu contraseña"
             autocomplete="current-password">
-          <span style="font-size:11px;color:var(--text-muted);margin-top:4px">
-            Para personeros: tu contraseña es tu DNI.
-          </span>
+
         </div>
 
         <button type="submit" class="btn btn-green" style="width:100%;justify-content:center;padding:13px">

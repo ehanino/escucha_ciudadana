@@ -16,11 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('plataforma.urls')),
     path('personeros/', include('personeros.urls', namespace='personeros')),
 ]
+
+if settings.DEBUG:
+    urlpatterns += staticfiles_urlpatterns()
 
 handler404 = 'personeros.views.handler404_redirect'
