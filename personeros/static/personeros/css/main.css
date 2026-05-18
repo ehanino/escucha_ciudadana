@@ -682,7 +682,7 @@ body {
   }
 
   .mobile-navbar-brand img {
-    height: 26px; /* Decreased by 6 points for perfect centering and mobile scale */
+    height: 34px; /* Increased to 34px for perfect visibility and balanced centering */
     width: auto;
     filter: drop-shadow(0 2px 8px rgba(57,181,74,0.2));
     display: block;
