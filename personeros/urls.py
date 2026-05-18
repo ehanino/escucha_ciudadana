@@ -8,6 +8,7 @@ urlpatterns = [
     path('login/',     views.login_view,        name='login'),
     path('logout/',    views.logout_view,       name='logout'),
     path('lista/',     views.lista_view,        name='lista'),
+    path('lista/exportar/', views.exportar_excel_view, name='exportar_excel'),
     path('mi-perfil/', views.mi_perfil_view,   name='mi_perfil'),
     path('registro/',  views.registro_publico_view, name='registro_publico'),
 

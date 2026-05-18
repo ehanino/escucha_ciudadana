@@ -272,6 +272,99 @@ def api_resumen_view(request):
     return JsonResponse({'departamentos': data})
 
 
+@login_required(login_url='personeros:login')
+def exportar_excel_view(request):
+    perfil = get_perfil(request.user)
+    if perfil and perfil.es_personero:
+        return redirect('personeros:mi_perfil')
+
+    qs = get_personero_queryset(request.user)
+
+    # Filtros
+    q          = request.GET.get('q', '')
+    estado     = request.GET.get('estado', '')
+    dpto_id    = request.GET.get('departamento', '')
+
+    if q:
+        qs = qs.filter(
+            Q(nombres__icontains=q) |
+            Q(apellido_paterno__icontains=q) |
+            Q(apellido_materno__icontains=q) |
+            Q(dni__icontains=q) |
+            Q(nro_celular__icontains=q)
+        )
+    if estado:
+        qs = qs.filter(estado=estado)
+    if dpto_id:
+        qs = qs.filter(distrito__provincia__departamento__id_ubigeo=dpto_id)
+
+    # Ordenar por apellido paterno
+    qs = qs.order_by('apellido_paterno')
+
+    # Generar la respuesta HTTP del CSV/Excel
+    import csv
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    filename = f"personeros_export_{timezone.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    # Escribir el BOM de UTF-8 para que Excel lo abra con formato correcto
+    response.write(b'\xef\xbb\xbf')
+
+    writer = csv.writer(response, delimiter=';') # Punto y coma es el estándar de Excel en español
+
+    # Encabezados
+    writer.writerow([
+        'DNI',
+        'Apellido Paterno',
+        'Apellido Materno',
+        'Nombres',
+        'Celular',
+        'Fecha Registro',
+        'Departamento',
+        'Provincia',
+        'Distrito',
+        'Centro de Votación',
+        'Mesa',
+        'Cargo',
+        'Estado',
+        'Perfil Completado',
+        'Fecha Completado',
+        'Observaciones'
+    ])
+
+    for p in qs:
+        # Resolver relaciones de forma segura para evitar AttributeError si hay campos nulos
+        dpto = p.distrito.provincia.departamento.nombre if p.distrito and p.distrito.provincia and p.distrito.provincia.departamento else 'Sin asignar'
+        prov = p.distrito.provincia.nombre if p.distrito and p.distrito.provincia else 'Sin asignar'
+        dist = p.distrito.nombre if p.distrito else 'Sin asignar'
+        cv = p.centro_votacion.nombre if p.centro_votacion else 'Sin asignar'
+
+        fecha_reg = timezone.localtime(p.fecha_creacion).strftime('%d/%m/%Y %H:%M:%S') if p.fecha_creacion else ''
+        fecha_comp = timezone.localtime(p.fecha_completado).strftime('%d/%m/%Y %H:%M:%S') if p.fecha_completado else ''
+        perfil_comp = 'Sí' if p.perfil_completado else 'No'
+
+        writer.writerow([
+            p.dni,
+            p.apellido_paterno,
+            p.apellido_materno,
+            p.nombres,
+            p.nro_celular,
+            fecha_reg,
+            dpto,
+            prov,
+            dist,
+            cv,
+            p.numero_mesa,
+            p.get_cargo_display(),
+            p.get_estado_display(),
+            perfil_comp,
+            fecha_comp,
+            p.observaciones
+        ])
+
+    return response
+
+
 def handler404_redirect(request, exception=None):
     """Redirige errores 404 al login, excepto para archivos estáticos."""
     if request.path.startswith(settings.STATIC_URL) or '/static/' in request.path:
