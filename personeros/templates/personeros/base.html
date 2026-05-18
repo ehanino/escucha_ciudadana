@@ -89,15 +89,15 @@
 
   <!-- Mobile Top Navigation Bar (Only visible on screens <= 900px) -->
   <header class="mobile-navbar">
-    <button class="mobile-menu-toggle" id="menuToggleBtn" aria-label="Abrir menú">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <button class="mobile-menu-toggle" id="menuToggleBtn" aria-label="Abrir menú" style="width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width: 26px; height: 26px; display: block; color: var(--text-primary);">
         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
       </svg>
     </button>
     <div class="mobile-navbar-brand">
       <img src="{% static 'images/JuntosPorElPeru.png' %}" alt="Logo JPP">
     </div>
-    <div style="width: 40px;"></div> <!-- Spacer to align centering -->
+    <div style="width: 44px; height: 44px; flex-shrink: 0;"></div> <!-- Symmetric spacer for perfect centering -->
   </header>
 
   <!-- ── Main ──────────────────────────────────────── -->
