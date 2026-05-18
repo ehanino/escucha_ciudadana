@@ -89,12 +89,15 @@
         left: -260px !important;
         width: 260px !important;
         z-index: 999 !important;
-        height: 100vh !important;
+        height: 100dvh !important; /* Modern dynamic viewport height for mobile */
         box-shadow: 0 0 40px rgba(0, 0, 0, 0.6) !important;
         transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
       }
       .sidebar.open {
         left: 0 !important;
+      }
+      .sidebar-footer {
+        padding-bottom: 32px !important; /* Breathing room to prevent overlap by mobile browsers' bottom bars */
       }
 
       /* Sidebar Close Button */

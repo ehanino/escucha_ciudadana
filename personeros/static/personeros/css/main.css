@@ -697,12 +697,15 @@ body {
     left: -260px; /* Off-screen default */
     width: 260px;
     z-index: 999;
-    height: 100vh;
+    height: 100dvh; /* Modern dynamic viewport height for mobile */
     box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .sidebar.open {
     left: 0; /* Slide in */
+  }
+  .sidebar-footer {
+    padding-bottom: 32px; /* Breathing room to prevent overlap by mobile browsers' bottom bars */
   }
 
   /* Sidebar Close Button */
