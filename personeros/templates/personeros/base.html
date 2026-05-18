@@ -12,11 +12,20 @@
 
 <div class="app-layout">
 
+  <!-- Sidebar Overlay (Only active on mobile when sidebar is open) -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
   <!-- ── Sidebar ──────────────────────────────────── -->
-  <aside class="sidebar">
-    <div class="sidebar-logo">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo" style="position: relative;">
       <img src="{% static 'images/JuntosPorElPeru.png' %}" alt="Juntos por el Perú">
       <span class="sidebar-tag">Sistema de Personeros</span>
+      <!-- Close Button for Mobile Sidebar -->
+      <button class="sidebar-close-btn" id="sidebarCloseBtn" aria-label="Cerrar menú">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
 
     <nav class="sidebar-nav">
@@ -78,6 +87,19 @@
     </div>
   </aside>
 
+  <!-- Mobile Top Navigation Bar (Only visible on screens <= 900px) -->
+  <header class="mobile-navbar">
+    <button class="mobile-menu-toggle" id="menuToggleBtn" aria-label="Abrir menú">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+    <div class="mobile-navbar-brand">
+      <img src="{% static 'images/JuntosPorElPeru.png' %}" alt="Logo JPP">
+    </div>
+    <div style="width: 40px;"></div> <!-- Spacer to align centering -->
+  </header>
+
   <!-- ── Main ──────────────────────────────────────── -->
   <main class="main-content">
     {% if messages %}
@@ -92,6 +114,31 @@
   </main>
 
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const menuToggleBtn = document.getElementById('menuToggleBtn');
+    const sidebarCloseBtn = document.getElementById('sidebarCloseBtn');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    function openSidebar() {
+      sidebar.classList.add('open');
+      sidebarOverlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      sidebarOverlay.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+
+    if (menuToggleBtn) menuToggleBtn.addEventListener('click', openSidebar);
+    if (sidebarCloseBtn) sidebarCloseBtn.addEventListener('click', closeSidebar);
+    if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
+  });
+</script>
 
 {% block extra_scripts %}{% endblock %}
 </body>
