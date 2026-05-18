@@ -136,6 +136,21 @@
   <div style="padding:24px">
     <form method="post" action="{% url 'personeros:mi_perfil' %}" id="perfil-form">
       {% csrf_token %}
+      {% if form.errors %}
+        <div class="alert alert-danger" style="margin-bottom: 20px;">
+          <strong>⚠️ Por favor corrige los siguientes errores:</strong>
+          <ul style="margin: 8px 0 0 20px; padding: 0; font-size: 13px;">
+            {% for field in form %}
+              {% for error in field.errors %}
+                <li>{{ field.label }}: {{ error }}</li>
+              {% endfor %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+              <li>{{ error }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
       <div class="form-grid">
 
         <!-- Celular -->
@@ -247,7 +262,7 @@
               </div>
               <!-- Campo oculto para enviar el valor en el POST -->
               <input type="hidden" name="centro_votacion" value="{{ centro_preasignado.id }}">
-              <input type="hidden" name="distrito" value="{{ centro_preasignado.distrito }}">
+              <input type="hidden" name="distrito" value="{{ centro_preasignado.distrito.id_ubigeo }}">
             </div>
 
           {% else %}

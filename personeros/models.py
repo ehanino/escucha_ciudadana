@@ -226,3 +226,37 @@ def crear_usuario_personero(sender, instance, created, **kwargs):
         # Vincular sin disparar la señal de nuevo
         Personero.objects.filter(pk=instance.pk).update(usuario=user)
         instance.usuario = user
+
+
+# ── Modelo: Captura Rápida de Votos por Mesa (Escrutinio) ──────────────────────
+class ActaElectoral(models.Model):
+    personero       = models.OneToOneField(Personero, on_delete=models.CASCADE, related_name='acta', verbose_name='Personero')
+    centro_votacion = models.ForeignKey(CentroVotacion, on_delete=models.PROTECT, verbose_name='Centro de Votación')
+    numero_mesa     = models.CharField(max_length=10, verbose_name='Número de Mesa')
+
+    # Desglose de votos
+    votos_jp        = models.PositiveIntegerField(default=0, verbose_name='Votos JP')
+    votos_k         = models.PositiveIntegerField(default=0, verbose_name='Votos K')
+    votos_blanco    = models.PositiveIntegerField(default=0, verbose_name='Votos Blanco')
+    votos_nulos     = models.PositiveIntegerField(default=0, verbose_name='Votos Nulos')
+    votos_viciados  = models.PositiveIntegerField(default=0, verbose_name='Votos Viciados')
+
+    # Foto del acta física
+    foto_acta       = models.ImageField(upload_to='actas_fotos/', null=True, blank=True, verbose_name='Foto de Acta')
+
+    # Metadatos
+    fecha_registro  = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Registro')
+    verificado      = models.BooleanField(default=False, verbose_name='Verificado por Coordinador')
+
+    class Meta:
+        verbose_name        = 'Acta Electoral'
+        verbose_name_plural = 'Actas Electorales'
+        unique_together     = ('centro_votacion', 'numero_mesa')
+
+    def __str__(self):
+        return f"Mesa {self.numero_mesa} — Local: {self.centro_votacion.nombre}"
+
+    @property
+    def total_votos(self):
+        """Suma total de todos los votos en la mesa."""
+        return self.votos_jp + self.votos_k + self.votos_blanco + self.votos_nulos + self.votos_viciados

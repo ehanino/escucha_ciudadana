@@ -7,8 +7,8 @@ from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 
-from .models import Personero, PerfilUsuario, CentroVotacion, Departamento, Provincia, Distrito
-from .forms import PersoneroSelfUpdateForm, PersoneroPublicRegistrationForm
+from .models import Personero, PerfilUsuario, CentroVotacion, Departamento, Provincia, Distrito, ActaElectoral
+from .forms import PersoneroSelfUpdateForm, PersoneroPublicRegistrationForm, ActaElectoralForm
 
 
 # ── Auth & Registro Público ───────────────────────────────────────────────────
@@ -60,6 +60,17 @@ def get_personero_queryset(user):
     return Personero.objects.none()
 
 
+def _get_personero_destination(user):
+    """Retorna la URL correcta para el personero según el avance de su registro."""
+    try:
+        personero = user.personero
+        if personero.perfil_completado and personero.estado == 'confirmado':
+            return 'personeros:reportar_escrutinio'
+    except Personero.DoesNotExist:
+        pass
+    return 'personeros:mi_perfil'
+
+
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
 def login_view(request):
@@ -81,7 +92,7 @@ def login_view(request):
 def _redirect_after_login(user):
     perfil = get_perfil(user)
     if perfil and perfil.es_personero:
-        return redirect('personeros:mi_perfil')
+        return redirect(_get_personero_destination(user))
     return redirect('personeros:dashboard')
 
 
@@ -96,7 +107,7 @@ def logout_view(request):
 def dashboard_view(request):
     perfil = get_perfil(request.user)
     if perfil and perfil.es_personero:
-        return redirect('personeros:mi_perfil')
+        return redirect(_get_personero_destination(request.user))
 
     qs = get_personero_queryset(request.user)
 
@@ -109,6 +120,41 @@ def dashboard_view(request):
 
     pct_confirmados = round((confirmados / total * 100) if total else 0)
     pct_completados = round((completados / total * 100) if total else 0)
+
+    # --- Consolidación de Conteo de Votos (Escrutinio Rápido) ---
+    from django.db.models import Sum
+    actas_qs = ActaElectoral.objects.filter(personero__in=qs)
+    
+    votos_totales = actas_qs.aggregate(
+        jp=Sum('votos_jp'),
+        k=Sum('votos_k'),
+        blanco=Sum('votos_blanco'),
+        nulos=Sum('votos_nulos'),
+        viciados=Sum('votos_viciados'),
+    )
+
+    votos_jp = votos_totales['jp'] or 0
+    votos_k = votos_totales['k'] or 0
+    votos_blanco = votos_totales['blanco'] or 0
+    votos_nulos = votos_totales['nulos'] or 0
+    votos_viciados = votos_totales['viciados'] or 0
+
+    votos_validos = votos_jp + votos_k
+    votos_emitidos = votos_validos + votos_blanco + votos_nulos + votos_viciados
+
+    pct_jp = round((votos_jp / votos_validos * 100) if votos_validos else 0, 1)
+    pct_k = round((votos_k / votos_validos * 100) if votos_validos else 0, 1)
+
+    pct_blanco = round((votos_blanco / votos_emitidos * 100) if votos_emitidos else 0, 1)
+    pct_nulos = round((votos_nulos / votos_emitidos * 100) if votos_emitidos else 0, 1)
+    pct_viciados = round((votos_viciados / votos_emitidos * 100) if votos_emitidos else 0, 1)
+
+    # Avance de Mesas
+    mesas_esperadas = qs.filter(estado='confirmado').exclude(numero_mesa='').exclude(centro_votacion__isnull=True).count()
+    mesas_procesadas = actas_qs.count()
+    pct_mesas = round((mesas_procesadas / mesas_esperadas * 100) if mesas_esperadas else 0, 1)
+
+    actas_recientes = actas_qs.order_by('-fecha_registro')[:10]
 
     # Por departamento
     por_dpto = (
@@ -141,6 +187,24 @@ def dashboard_view(request):
         'pct_completados': pct_completados,
         'por_dpto':        por_dpto_list,
         'recientes':       recientes,
+        
+        # Conteo
+        'votos_jp':        votos_jp,
+        'votos_k':         votos_k,
+        'votos_blanco':    votos_blanco,
+        'votos_nulos':     votos_nulos,
+        'votos_viciados':  votos_viciados,
+        'votos_validos':   votos_validos,
+        'votos_emitidos':  votos_emitidos,
+        'pct_jp':          pct_jp,
+        'pct_k':           pct_k,
+        'pct_blanco':      pct_blanco,
+        'pct_nulos':       pct_nulos,
+        'pct_viciados':    pct_viciados,
+        'mesas_esperadas': mesas_esperadas,
+        'mesas_procesadas':mesas_procesadas,
+        'pct_mesas':       pct_mesas,
+        'actas_recientes': actas_recientes,
     }
     return render(request, 'personeros/dashboard.html', context)
 
@@ -151,7 +215,7 @@ def dashboard_view(request):
 def lista_view(request):
     perfil = get_perfil(request.user)
     if perfil and perfil.es_personero:
-        return redirect('personeros:mi_perfil')
+        return redirect(_get_personero_destination(request.user))
 
     qs = get_personero_queryset(request.user)
 
@@ -198,6 +262,7 @@ def mi_perfil_view(request):
         return redirect('personeros:login')
 
     if request.method == 'POST':
+        # Guardar perfil
         if personero.perfil_completado:
             messages.warning(request, 'Tu perfil ya fue completado y no puede modificarse.')
             return redirect('personeros:mi_perfil')
@@ -225,6 +290,54 @@ def mi_perfil_view(request):
         'centro_preasignado': centro_preasignado,
     }
     return render(request, 'personeros/mi_perfil.html', context)
+
+
+# ── Reportar Escrutinio por Mesa ──────────────────────────────────────────────
+
+@login_required(login_url='personeros:login')
+def reportar_escrutinio_view(request):
+    try:
+        personero = request.user.personero
+    except Personero.DoesNotExist:
+        from django.contrib.auth import logout
+        logout(request)
+        messages.error(request, 'No tienes un perfil de personero asociado.')
+        return redirect('personeros:login')
+
+    acta = getattr(personero, 'acta', None)
+    form_acta = None
+
+    if request.method == 'POST':
+        if not personero.perfil_completado:
+            messages.error(request, 'Primero debes completar tus datos electorales.')
+            return redirect('personeros:reportar_escrutinio')
+        if not personero.centro_votacion or not personero.numero_mesa:
+            messages.error(request, 'Debes tener un local y una mesa asignados para reportar.')
+            return redirect('personeros:reportar_escrutinio')
+        if acta:
+            messages.warning(request, 'El escrutinio de tu mesa ya fue reportado.')
+            return redirect('personeros:reportar_escrutinio')
+
+        form_acta = ActaElectoralForm(request.POST, request.FILES)
+        if form_acta.is_valid():
+            a = form_acta.save(commit=False)
+            a.personero = personero
+            a.centro_votacion = personero.centro_votacion
+            a.numero_mesa = personero.numero_mesa
+            a.save()
+            messages.success(request, '¡Resultados de la mesa guardados con éxito!')
+            return redirect('personeros:reportar_escrutinio')
+        else:
+            messages.error(request, 'Hubo un error al validar los datos del conteo de votos.')
+    else:
+        form_acta = ActaElectoralForm(instance=acta)
+
+    context = {
+        'personero': personero,
+        'acta':      acta,
+        'form_acta': form_acta,
+    }
+    return render(request, 'personeros/reportar_escrutinio.html', context)
 
 
 # ── APIs para selectores en cascada ───────────────────────────────────────────
@@ -276,7 +389,7 @@ def api_resumen_view(request):
 def exportar_excel_view(request):
     perfil = get_perfil(request.user)
     if perfil and perfil.es_personero:
-        return redirect('personeros:mi_perfil')
+        return redirect(_get_personero_destination(request.user))
 
     qs = get_personero_queryset(request.user)
 

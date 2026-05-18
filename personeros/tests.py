@@ -34,6 +34,22 @@ class PersoneroExportTestCase(TestCase):
         response = self.client.get(reverse('personeros:exportar_excel'))
         self.assertRedirects(response, reverse('personeros:mi_perfil'))
 
+    def test_login_confirmed_and_completed_personero_redirects_to_escrutinio(self):
+        """Verifica que si un personero está confirmado y completó su perfil, vaya directo a reportar votos."""
+        self.personero.perfil_completado = True
+        self.personero.save()
+        
+        # Test login view redirect
+        response = self.client.post(reverse('personeros:login'), {
+            'username': '12345678',
+            'password': '12345678'
+        })
+        self.assertRedirects(response, reverse('personeros:reportar_escrutinio'))
+
+        # Test dashboard page redirect
+        response = self.client.get(reverse('personeros:dashboard'))
+        self.assertRedirects(response, reverse('personeros:reportar_escrutinio'))
+
     def test_export_admin_success(self):
         """Verifica que un administrador pueda descargar el CSV correctamente con UTF-8 BOM y datos correctos."""
         self.client.login(username='admin_test', password='password123')
@@ -143,3 +159,118 @@ class PersoneroRegistrationFormTestCase(TestCase):
         form = PersoneroPublicRegistrationForm(data=data)
         self.assertFalse(form.is_valid())
         self.assertIn('nro_celular', form.errors)
+
+
+from personeros.models import ActaElectoral, CentroVotacion, Departamento, Provincia, Distrito
+from personeros.forms import ActaElectoralForm
+
+class ActaElectoralTestCase(TestCase):
+    def setUp(self):
+        # Setup UBIGEO
+        self.dpto = Departamento.objects.create(id_ubigeo='15', nombre='LIMA')
+        self.prov = Provincia.objects.create(id_ubigeo='1501', nombre='LIMA', departamento=self.dpto)
+        self.dist = Distrito.objects.create(id_ubigeo='150101', nombre='LIMA', provincia=self.prov)
+
+        # Setup local de votación
+        self.local = CentroVotacion.objects.create(
+            distrito=self.dist,
+            nombre='COLEGIO NACIONAL GUADALUPE',
+            direccion='AV. ALFONSO UGARTE 1227'
+        )
+
+        # Setup personero
+        self.personero = Personero.objects.create(
+            dni='87654321',
+            nombres='CARLOS',
+            apellido_paterno='PÉREZ',
+            apellido_materno='GÓMEZ',
+            nro_celular='987654321',
+            distrito=self.dist,
+            centro_votacion=self.local,
+            numero_mesa='123456',
+            estado='confirmado',
+            perfil_completado=True
+        )
+        self.personero_user = self.personero.usuario
+        self.client = Client()
+
+    def test_acta_form_valid_with_consistent_data(self):
+        """Verifica que el formulario de acta es válido cuando la suma de votos es <= 300."""
+        data = {
+            'votos_jp': 120,
+            'votos_k': 110,
+            'votos_blanco': 10,
+            'votos_nulos': 15,
+            'votos_viciados': 5,
+        }
+        form = ActaElectoralForm(data=data)
+        self.assertTrue(form.is_valid(), form.errors.as_json())
+
+    def test_acta_form_invalid_if_total_votos_exceeds_300(self):
+        """Verifica que el formulario de acta no es válido si la suma de votos es > 300."""
+        data = {
+            'votos_jp': 160,
+            'votos_k': 150, # 160 + 150 = 310 > 300
+            'votos_blanco': 0,
+            'votos_nulos': 0,
+            'votos_viciados': 0,
+        }
+        form = ActaElectoralForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('__all__', form.errors) # Validación a nivel de formulario/clean
+
+    def test_reportar_escrutinio_success(self):
+        """Verifica que un personero con perfil completado y mesa asignada pueda reportar el escrutinio exitosamente."""
+        self.client.force_login(self.personero_user)
+        response = self.client.post(reverse('personeros:reportar_escrutinio'), {
+            'votos_jp': 85,
+            'votos_k': 75,
+            'votos_blanco': 5,
+            'votos_nulos': 5,
+            'votos_viciados': 0,
+        })
+        self.assertEqual(response.status_code, 302) # Redirección tras guardar
+        
+        # Verificar que el acta se haya guardado con el centro y mesa del personero
+        self.assertTrue(ActaElectoral.objects.filter(personero=self.personero).exists())
+        acta = ActaElectoral.objects.get(personero=self.personero)
+        self.assertEqual(acta.votos_jp, 85)
+        self.assertEqual(acta.votos_k, 75)
+        self.assertEqual(acta.centro_votacion, self.local)
+        self.assertEqual(acta.numero_mesa, '123456')
+
+    def test_reportar_escrutinio_gated_by_profile_completion(self):
+        """Verifica que un personero con perfil incompleto no pueda reportar el escrutinio."""
+        self.personero.perfil_completado = False
+        self.personero.save()
+
+        self.client.force_login(self.personero_user)
+        response = self.client.post(reverse('personeros:reportar_escrutinio'), {
+            'votos_jp': 50,
+            'votos_k': 50,
+        })
+        self.assertEqual(response.status_code, 302)
+        # No se debió crear ningún acta
+        self.assertFalse(ActaElectoral.objects.filter(personero=self.personero).exists())
+
+    def test_reportar_escrutinio_double_submission_prevented(self):
+        """Verifica que no se pueda reportar dos veces el escrutinio para la misma mesa."""
+        # Registrar primer escrutinio
+        ActaElectoral.objects.create(
+            personero=self.personero,
+            centro_votacion=self.local,
+            numero_mesa='123456',
+            votos_jp=100,
+            votos_k=100
+        )
+
+        self.client.force_login(self.personero_user)
+        response = self.client.post(reverse('personeros:reportar_escrutinio'), {
+            'votos_jp': 120,
+            'votos_k': 120,
+        })
+        self.assertEqual(response.status_code, 302)
+        
+        # El acta debe mantenerse intacta (votos_jp=100, no 120)
+        acta = ActaElectoral.objects.get(personero=self.personero)
+        self.assertEqual(acta.votos_jp, 100)

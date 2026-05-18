@@ -10,6 +10,7 @@ urlpatterns = [
     path('lista/',     views.lista_view,        name='lista'),
     path('lista/exportar/', views.exportar_excel_view, name='exportar_excel'),
     path('mi-perfil/', views.mi_perfil_view,   name='mi_perfil'),
+    path('reportar-escrutinio/', views.reportar_escrutinio_view, name='reportar_escrutinio'),
     path('registro/',  views.registro_publico_view, name='registro_publico'),
 
     # APIs internas

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Personero, CentroVotacion, Departamento, Provincia, Distrito
+from .models import Personero, CentroVotacion, Departamento, Provincia, Distrito, ActaElectoral
 
 
 class PersoneroSelfUpdateForm(forms.ModelForm):
@@ -248,3 +248,32 @@ class PersoneroPublicRegistrationForm(forms.ModelForm):
         if not celular.isdigit() or len(celular) != 9 or not celular.startswith('9'):
             raise forms.ValidationError('El celular debe empezar con 9 y tener exactamente 9 dígitos.')
         return celular
+
+
+class ActaElectoralForm(forms.ModelForm):
+    class Meta:
+        model = ActaElectoral
+        fields = ['votos_jp', 'votos_k', 'votos_blanco', 'votos_nulos', 'votos_viciados', 'foto_acta']
+        widgets = {
+            'votos_jp':       forms.NumberInput(attrs={'class': 'form-input', 'min': 0, 'inputmode': 'numeric', 'style': 'text-align: center; font-size: 24px; font-weight: bold; color: white;'}),
+            'votos_k':        forms.NumberInput(attrs={'class': 'form-input', 'min': 0, 'inputmode': 'numeric', 'style': 'text-align: center; font-size: 24px; font-weight: bold; color: white;'}),
+            'votos_blanco':   forms.NumberInput(attrs={'class': 'form-input', 'min': 0, 'inputmode': 'numeric', 'style': 'text-align: center;'}),
+            'votos_nulos':    forms.NumberInput(attrs={'class': 'form-input', 'min': 0, 'inputmode': 'numeric', 'style': 'text-align: center;'}),
+            'votos_viciados': forms.NumberInput(attrs={'class': 'form-input', 'min': 0, 'inputmode': 'numeric', 'style': 'text-align: center;'}),
+            'foto_acta':      forms.FileInput(attrs={'class': 'form-input', 'id': 'foto_acta_input', 'accept': 'image/*', 'style': 'display: none;'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        v_jp = cleaned_data.get('votos_jp') or 0
+        v_k = cleaned_data.get('votos_k') or 0
+        v_blanco = cleaned_data.get('votos_blanco') or 0
+        v_nulos = cleaned_data.get('votos_nulos') or 0
+        v_viciados = cleaned_data.get('votos_viciados') or 0
+
+        total = v_jp + v_k + v_blanco + v_nulos + v_viciados
+        if total > 300:
+            raise forms.ValidationError(
+                f'El total de votos reportado ({total}) supera los 300 electores (límite máximo físico por mesa en Perú).'
+            )
+        return cleaned_data
