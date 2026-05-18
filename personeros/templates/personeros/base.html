@@ -7,6 +7,134 @@
   <title>{% block title %}Personeros{% endblock %} | Juntos por el Perú</title>
   <link rel="stylesheet" href="{% static 'personeros/css/main.css' %}">
   {% block extra_head %}{% endblock %}
+
+  <style>
+    /* Estilos embebidos ultra-robustecidos para evitar cache agresivo de CSS en móviles */
+    .sidebar-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(5px);
+      z-index: 998;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .sidebar-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .mobile-navbar {
+      display: none;
+    }
+    .sidebar-close-btn {
+      display: none;
+    }
+
+    @media (max-width: 900px) {
+      .app-layout {
+        grid-template-columns: 1fr !important;
+        padding-top: 60px !important;
+      }
+
+      /* Mobile Top Navbar */
+      .mobile-navbar {
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 8px;
+        height: 60px;
+        background: rgba(10, 20, 11, 0.96) !important;
+        border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+        backdrop-filter: blur(12px) !important;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 990;
+        box-sizing: border-box;
+      }
+
+      .mobile-menu-toggle {
+        background: transparent !important;
+        border: none !important;
+        color: #f0f4f1 !important;
+        cursor: pointer;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 8px !important;
+        transition: background-color 0.2s;
+        flex-shrink: 0;
+      }
+      .mobile-menu-toggle:hover {
+        background: rgba(255,255,255,0.07) !important;
+      }
+
+      .mobile-navbar-brand img {
+        height: 26px !important;
+        width: auto !important;
+        filter: drop-shadow(0 2px 8px rgba(57,181,74,0.2)) !important;
+        display: block !important;
+      }
+
+      /* Responsive Slide-In Sidebar */
+      .sidebar {
+        display: flex !important;
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        left: -260px !important;
+        width: 260px !important;
+        z-index: 999 !important;
+        height: 100vh !important;
+        box-shadow: 0 0 40px rgba(0, 0, 0, 0.6) !important;
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      }
+      .sidebar.open {
+        left: 0 !important;
+      }
+
+      /* Sidebar Close Button */
+      .sidebar-close-btn {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        background: transparent !important;
+        border: none !important;
+        color: #8a9e8d !important;
+        cursor: pointer;
+        position: absolute !important;
+        right: 16px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        padding: 6px !important;
+        border-radius: 50% !important;
+        transition: background-color 0.2s, color 0.2s;
+      }
+      .sidebar-close-btn:hover {
+        background: rgba(255,255,255,0.07) !important;
+        color: #f0f4f1 !important;
+      }
+      .sidebar-close-btn svg {
+        width: 20px !important;
+        height: 20px !important;
+      }
+
+      .main-content {
+        padding: 24px 16px !important;
+      }
+      .form-grid { grid-template-columns: 1fr !important; }
+      .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+    }
+
+    @media (max-width: 480px) {
+      .kpi-grid { grid-template-columns: 1fr !important; }
+      .login-card { padding: 32px 24px !important; }
+    }
+  </style>
 </head>
 <body>
 
