@@ -192,6 +192,8 @@ def mi_perfil_view(request):
     try:
         personero = request.user.personero
     except Personero.DoesNotExist:
+        from django.contrib.auth import logout
+        logout(request)
         messages.error(request, 'No tienes un perfil de personero asociado.')
         return redirect('personeros:login')
 
