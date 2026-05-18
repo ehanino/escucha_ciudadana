@@ -182,27 +182,33 @@ class PersoneroAdminForm(forms.ModelForm):
 class PersoneroPublicRegistrationForm(forms.ModelForm):
     departamento = forms.ModelChoiceField(
         queryset=Departamento.objects.all(),
-        required=True,
+        required=False,
         label='Departamento',
         widget=forms.Select(attrs={'id': 'id_departamento', 'class': 'form-input'})
     )
     provincia = forms.ModelChoiceField(
         queryset=Provincia.objects.none(),
-        required=True,
+        required=False,
         label='Provincia',
         widget=forms.Select(attrs={'id': 'id_provincia', 'class': 'form-input'})
     )
     distrito = forms.ModelChoiceField(
         queryset=Distrito.objects.none(),
-        required=True,
+        required=False,
         label='Distrito',
         widget=forms.Select(attrs={'id': 'id_distrito', 'class': 'form-input'})
     )
 
     fecha_nacimiento = forms.DateField(
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-input'}),
-        required=True,
+        required=False,
         label='Fecha de Nacimiento',
+    )
+
+    nro_celular = forms.CharField(
+        required=True,
+        label='Nro. Celular',
+        widget=forms.TextInput(attrs={'class': 'form-input', 'placeholder': '9XXXXXXXX'})
     )
 
     class Meta:
@@ -216,7 +222,6 @@ class PersoneroPublicRegistrationForm(forms.ModelForm):
             'apellido_materno': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Apellido Materno'}),
             'nombres':          forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Nombres'}),
             'dni':              forms.TextInput(attrs={'class': 'form-input', 'placeholder': '8 dígitos'}),
-            'nro_celular':      forms.TextInput(attrs={'class': 'form-input', 'placeholder': '9XXXXXXXX'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -233,3 +238,13 @@ class PersoneroPublicRegistrationForm(forms.ModelForm):
         if Personero.objects.filter(dni=dni).exists():
             raise forms.ValidationError('Este DNI ya está registrado en el sistema.')
         return dni
+
+    def clean_nro_celular(self):
+        celular = self.cleaned_data.get('nro_celular', '').strip()
+        # Eliminar guiones y espacios en blanco automáticamente
+        celular = celular.replace(' ', '').replace('-', '')
+        if not celular:
+            raise forms.ValidationError('El número de celular es obligatorio.')
+        if not celular.isdigit() or len(celular) != 9 or not celular.startswith('9'):
+            raise forms.ValidationError('El celular debe empezar con 9 y tener exactamente 9 dígitos.')
+        return celular

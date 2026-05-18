@@ -81,3 +81,65 @@ class PersoneroExportTestCase(TestCase):
         self.assertIn('87654321;PÉREZ;GÓMEZ;CARLOS', csv_text)
         # El de DNI 12345678 (confirmado) NO debe estar presente
         self.assertNotIn('12345678;HERRERA;AYAY;EDUARDO', csv_text)
+
+
+from personeros.forms import PersoneroPublicRegistrationForm
+
+class PersoneroRegistrationFormTestCase(TestCase):
+    def test_form_valid_with_only_required_fields(self):
+        """Verifica que el formulario es válido cuando solo se ingresan los campos obligatorios."""
+        data = {
+            'apellido_paterno': 'Herrera',
+            'apellido_materno': 'Ayay',
+            'nombres': 'Eduardo',
+            'dni': '99998888',
+            'nro_celular': '987654321',
+        }
+        form = PersoneroPublicRegistrationForm(data=data)
+        self.assertTrue(form.is_valid(), form.errors.as_json())
+
+    def test_form_invalid_if_missing_required_fields(self):
+        """Verifica que el formulario es inválido si falta alguno de los obligatorios."""
+        # Falta celular
+        data = {
+            'apellido_paterno': 'Herrera',
+            'apellido_materno': 'Ayay',
+            'nombres': 'Eduardo',
+            'dni': '99998888',
+        }
+        form = PersoneroPublicRegistrationForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nro_celular', form.errors)
+
+    def test_form_cleans_cellular_correctly(self):
+        """Verifica que el validador de celular limpie espacios y guiones y guarde el formato limpio."""
+        data = {
+            'apellido_paterno': 'Herrera',
+            'apellido_materno': 'Ayay',
+            'nombres': 'Eduardo',
+            'dni': '99997777',
+            'nro_celular': '987 - 654 - 321', # con espacios y guiones
+        }
+        form = PersoneroPublicRegistrationForm(data=data)
+        self.assertTrue(form.is_valid(), form.errors.as_json())
+        self.assertEqual(form.cleaned_data['nro_celular'], '987654321')
+
+    def test_form_invalid_if_invalid_cellular_format(self):
+        """Verifica que no se acepten celulares que no tengan 9 dígitos o no empiecen con 9."""
+        # Empieza con 8
+        data = {
+            'apellido_paterno': 'Herrera',
+            'apellido_materno': 'Ayay',
+            'nombres': 'Eduardo',
+            'dni': '99996666',
+            'nro_celular': '887654321',
+        }
+        form = PersoneroPublicRegistrationForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nro_celular', form.errors)
+
+        # Menos dígitos
+        data['nro_celular'] = '987654'
+        form = PersoneroPublicRegistrationForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertIn('nro_celular', form.errors)
