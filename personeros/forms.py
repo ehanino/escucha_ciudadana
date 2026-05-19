@@ -253,8 +253,9 @@ class PersoneroPublicRegistrationForm(forms.ModelForm):
 class ActaElectoralForm(forms.ModelForm):
     class Meta:
         model = ActaElectoral
-        fields = ['votos_jp', 'votos_k', 'votos_blanco', 'votos_nulos', 'votos_viciados', 'foto_acta']
+        fields = ['numero_mesa', 'votos_jp', 'votos_k', 'votos_blanco', 'votos_nulos', 'votos_viciados', 'foto_acta']
         widgets = {
+            'numero_mesa':    forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'Ej. 123456', 'style': 'text-align: center; font-size: 18px; font-weight: bold;'}),
             'votos_jp':       forms.NumberInput(attrs={'class': 'form-input', 'min': 0, 'inputmode': 'numeric', 'style': 'text-align: center; font-size: 24px; font-weight: bold; color: white;'}),
             'votos_k':        forms.NumberInput(attrs={'class': 'form-input', 'min': 0, 'inputmode': 'numeric', 'style': 'text-align: center; font-size: 24px; font-weight: bold; color: white;'}),
             'votos_blanco':   forms.NumberInput(attrs={'class': 'form-input', 'min': 0, 'inputmode': 'numeric', 'style': 'text-align: center;'}),

@@ -230,7 +230,7 @@ def crear_usuario_personero(sender, instance, created, **kwargs):
 
 # ── Modelo: Captura Rápida de Votos por Mesa (Escrutinio) ──────────────────────
 class ActaElectoral(models.Model):
-    personero       = models.OneToOneField(Personero, on_delete=models.CASCADE, related_name='acta', verbose_name='Personero')
+    personero       = models.ForeignKey(Personero, on_delete=models.CASCADE, related_name='actas', verbose_name='Personero')
     centro_votacion = models.ForeignKey(CentroVotacion, on_delete=models.PROTECT, verbose_name='Centro de Votación')
     numero_mesa     = models.CharField(max_length=10, verbose_name='Número de Mesa')
 

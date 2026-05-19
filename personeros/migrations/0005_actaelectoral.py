@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
                 ('fecha_registro', models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Registro')),
                 ('verificado', models.BooleanField(default=False, verbose_name='Verificado por Coordinador')),
                 ('centro_votacion', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='personeros.centrovotacion', verbose_name='Centro de Votación')),
-                ('personero', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='acta', to='personeros.personero', verbose_name='Personero')),
+                ('personero', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='actas', to='personeros.personero', verbose_name='Personero')),
             ],
             options={
                 'verbose_name': 'Acta Electoral',

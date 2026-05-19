@@ -197,6 +197,7 @@ class ActaElectoralTestCase(TestCase):
     def test_acta_form_valid_with_consistent_data(self):
         """Verifica que el formulario de acta es válido cuando la suma de votos es <= 300."""
         data = {
+            'numero_mesa': '123456',
             'votos_jp': 120,
             'votos_k': 110,
             'votos_blanco': 10,
@@ -209,6 +210,7 @@ class ActaElectoralTestCase(TestCase):
     def test_acta_form_invalid_if_total_votos_exceeds_300(self):
         """Verifica que el formulario de acta no es válido si la suma de votos es > 300."""
         data = {
+            'numero_mesa': '123456',
             'votos_jp': 160,
             'votos_k': 150, # 160 + 150 = 310 > 300
             'votos_blanco': 0,
@@ -223,6 +225,7 @@ class ActaElectoralTestCase(TestCase):
         """Verifica que un personero con perfil completado y mesa asignada pueda reportar el escrutinio exitosamente."""
         self.client.force_login(self.personero_user)
         response = self.client.post(reverse('personeros:reportar_escrutinio'), {
+            'numero_mesa': '123456',
             'votos_jp': 85,
             'votos_k': 75,
             'votos_blanco': 5,
@@ -232,12 +235,11 @@ class ActaElectoralTestCase(TestCase):
         self.assertEqual(response.status_code, 302) # Redirección tras guardar
         
         # Verificar que el acta se haya guardado con el centro y mesa del personero
-        self.assertTrue(ActaElectoral.objects.filter(personero=self.personero).exists())
-        acta = ActaElectoral.objects.get(personero=self.personero)
+        self.assertTrue(self.personero.actas.filter(numero_mesa='123456').exists())
+        acta = self.personero.actas.get(numero_mesa='123456')
         self.assertEqual(acta.votos_jp, 85)
         self.assertEqual(acta.votos_k, 75)
         self.assertEqual(acta.centro_votacion, self.local)
-        self.assertEqual(acta.numero_mesa, '123456')
 
     def test_reportar_escrutinio_gated_by_profile_completion(self):
         """Verifica que un personero con perfil incompleto no pueda reportar el escrutinio."""
@@ -246,12 +248,13 @@ class ActaElectoralTestCase(TestCase):
 
         self.client.force_login(self.personero_user)
         response = self.client.post(reverse('personeros:reportar_escrutinio'), {
+            'numero_mesa': '123456',
             'votos_jp': 50,
             'votos_k': 50,
         })
         self.assertEqual(response.status_code, 302)
         # No se debió crear ningún acta
-        self.assertFalse(ActaElectoral.objects.filter(personero=self.personero).exists())
+        self.assertFalse(self.personero.actas.filter(numero_mesa='123456').exists())
 
     def test_reportar_escrutinio_double_submission_prevented(self):
         """Verifica que no se pueda reportar dos veces el escrutinio para la misma mesa."""
@@ -266,11 +269,14 @@ class ActaElectoralTestCase(TestCase):
 
         self.client.force_login(self.personero_user)
         response = self.client.post(reverse('personeros:reportar_escrutinio'), {
+            'numero_mesa': '123456',
             'votos_jp': 120,
             'votos_k': 120,
         })
-        self.assertEqual(response.status_code, 302)
+        # Debe retornar la vista del formulario cargando el mensaje de error (200 OK)
+        self.assertEqual(response.status_code, 200)
         
         # El acta debe mantenerse intacta (votos_jp=100, no 120)
-        acta = ActaElectoral.objects.get(personero=self.personero)
+        acta = self.personero.actas.get(numero_mesa='123456')
         self.assertEqual(acta.votos_jp, 100)
+

@@ -6,7 +6,7 @@
 <div class="page-header">
   <h1 class="page-title">🗳️ Reportar Escrutinio</h1>
   <p class="page-subtitle">
-    Ingresa los resultados del conteo de votos de tu mesa electoral y adjunta la foto de la hoja física.
+    Ingresa los resultados del conteo de votos de las mesas de tu local de votación y adjunta la foto física del acta de cada una.
   </p>
 </div>
 
@@ -28,79 +28,30 @@
 
 {% else %}
 
-  {% if acta %}
-    <!-- ── Recibo digital del acta ya reportada ───────────────────────── -->
-    <div class="section-card" style="max-width:720px;border: 1px solid rgba(57,181,74,.4);">
-      <div class="section-header" style="background: linear-gradient(135deg, rgba(57,181,74,.2) 0%, rgba(57,181,74,.05) 100%);">
-        <span class="section-title" style="color:var(--jp-green);display:flex;align-items:center;gap:8px">
-          <span>🗳️ Mesa {{ personero.numero_mesa }} — Reporte Completado</span>
-          <span style="font-size:11px;background:rgba(57,181,74,.2);color:var(--jp-green);padding:2px 8px;border-radius:10px;font-weight:700">ENVIADO</span>
-        </span>
-      </div>
-      <div style="padding:24px">
-        <p style="font-size:14px;color:var(--text-muted);margin-bottom:20px">
-          El escrutinio para tu mesa fue reportado el <strong>{{ acta.fecha_registro|date:"d/m/Y \a\l\a\s H:i" }}</strong>. Gracias por defender el voto de Juntos por el Perú.
-        </p>
-
-        <!-- Cuadrícula de votos en lectura -->
-        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px">
-          <div style="border: 1px solid rgba(57,181,74,.25);background:rgba(57,181,74,.05);border-radius:8px;padding:16px;text-align:center">
-            <div style="font-size:12px;font-weight:700;color:var(--jp-green);margin-bottom:4px">VOTOS JP</div>
-            <div style="font-size:32px;font-weight:800;color:white">💚 {{ acta.votos_jp }}</div>
-          </div>
-          <div style="border: 1px solid rgba(227,30,36,.25);background:rgba(227,30,36,.05);border-radius:8px;padding:16px;text-align:center">
-            <div style="font-size:12px;font-weight:700;color:#e31e24;margin-bottom:4px">VOTOS K</div>
-            <div style="font-size:32px;font-weight:800;color:white">❤️ {{ acta.votos_k }}</div>
-          </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:8px;padding:12px;margin-bottom:20px">
-          <div style="text-align:center">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Blancos</div>
-            <div style="font-size:18px;font-weight:700;color:white">{{ acta.votos_blanco }}</div>
-          </div>
-          <div style="text-align:center">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Nulos</div>
-            <div style="font-size:18px;font-weight:700;color:white">{{ acta.votos_nulos }}</div>
-          </div>
-          <div style="text-align:center">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:2px">Viciados</div>
-            <div style="font-size:18px;font-weight:700;color:white">{{ acta.votos_viciados }}</div>
-          </div>
-        </div>
-
-        <!-- Total de la mesa -->
-        <div style="background:rgba(57,181,74,.1);border:1px solid rgba(57,181,74,.2);border-radius:8px;padding:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-          <span style="font-size:13px;color:white;font-weight:600">Total Votos Emitidos en Mesa:</span>
-          <span style="font-size:22px;font-weight:800;color:var(--jp-green)">{{ acta.total_votos }}</span>
-        </div>
-
-        <!-- Foto de respaldo -->
-        {% if acta.foto_acta %}
-          <div style="border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">FOTO DEL ACTA FÍSICA SUBIDA</div>
-            <a href="{{ acta.foto_acta.url }}" target="_blank" style="display:inline-block;position:relative">
-              <img src="{{ acta.foto_acta.url }}" alt="Foto del acta física" style="max-height:180px;border-radius:6px;border:1px solid rgba(255,255,255,.15);box-shadow:0 4px 12px rgba(0,0,0,.5)">
-              <div style="margin-top:6px;font-size:11px;color:var(--jp-green);font-weight:600">🔍 Ver foto completa</div>
-            </a>
-          </div>
-        {% endif %}
-      </div>
-    </div>
-
-  {% else %}
+  <div style="display:grid;grid-template-columns:1fr;gap:24px;max-width:850px">
+    
     <!-- ── Formulario interactivo de escrutinio ────────────────────────── -->
-    <div class="section-card" style="max-width:720px;border: 1px solid rgba(57,181,74,.3);">
+    <div class="section-card" style="border: 1px solid rgba(57,181,74,.3);">
       <div class="section-header" style="background: linear-gradient(135deg, rgba(57,181,74,.15) 0%, rgba(57,181,74,.05) 100%);">
-        <span class="section-title">🗳️ Mesa {{ personero.numero_mesa }} — {{ personero.centro_votacion.nombre }}</span>
+        <span class="section-title">✍️ Registrar Reporte de Mesa — {{ personero.centro_votacion.nombre }}</span>
       </div>
       <div style="padding:24px">
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">
-          Ingresa con cuidado los votos obtenidos en tu mesa una vez culminado el conteo de los miembros de mesa. Asegúrate de verificar los números.
+          Ingresa con cuidado el número de la mesa y los votos obtenidos una vez culminado el conteo de los miembros de mesa. Puedes reportar múltiples mesas secuencialmente.
         </p>
 
         <form method="post" enctype="multipart/form-data" action="{% url 'personeros:reportar_escrutinio' %}" id="escrutinio-form">
           {% csrf_token %}
+
+          <!-- Campo Número de Mesa -->
+          <div style="border: 1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);border-radius:8px;padding:16px;margin-bottom:20px;text-align:center">
+            <label style="font-size:13px;font-weight:700;color:white;display:block;margin-bottom:8px">🔢 Número de Mesa a Reportar</label>
+            {{ form_acta.numero_mesa }}
+            {{ form_acta.numero_mesa.errors }}
+            <span style="font-size:11px;color:var(--text-muted);display:block;margin-top:6px">
+              Por defecto se muestra tu mesa asignada, pero puedes cambiarla para reportar otra mesa de tu local.
+            </span>
+          </div>
 
           <!-- Inputs de conteo JP vs K -->
           <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:20px">
@@ -168,19 +119,65 @@
 
           <div style="display:flex;gap:12px;align-items:center">
             <button type="submit" class="btn btn-green btn-full" id="btn-reportar">
-              Enviar Resultados del Conteo
+              Guardar y Reportar Resultados
             </button>
           </div>
         </form>
       </div>
     </div>
-  {% endif %}
+
+    <!-- ── Lista de actas ya reportadas por este personero ──────────────── -->
+    {% if actas_reportadas %}
+      <div class="section-card">
+        <div class="section-header" style="background:rgba(255,255,255,.02);">
+          <span class="section-title" style="display:flex;align-items:center;gap:8px">
+            <span>✅ Mis Mesas Reportadas ({{ actas_reportadas.count }})</span>
+          </span>
+        </div>
+        <div style="padding:20px">
+          <div style="display:grid;grid-template-columns:1fr;gap:16px">
+            {% for a in actas_reportadas %}
+              <div style="border: 1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);border-radius:8px;padding:16px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px">
+                <div>
+                  <div style="font-size:15px;font-weight:700;color:white;margin-bottom:4px;display:flex;align-items:center;gap:8px">
+                    <span>Mesa: {{ a.numero_mesa }}</span>
+                    <span style="font-size:10px;background:rgba(57,181,74,.15);color:var(--jp-green);padding:2px 8px;border-radius:10px;font-weight:700">ENVIADO</span>
+                  </div>
+                  <div style="font-size:12px;color:var(--text-muted)">
+                    Reportado el {{ a.fecha_registro|date:"d/m/Y H:i" }}
+                  </div>
+                  <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;font-size:12px">
+                    <span style="background:rgba(57,181,74,.1);color:var(--jp-green);padding:3px 8px;border-radius:4px;font-weight:600">JP: {{ a.votos_jp }}</span>
+                    <span style="background:rgba(227,30,36,.1);color:#e31e24;padding:3px 8px;border-radius:4px;font-weight:600">K: {{ a.votos_k }}</span>
+                    <span style="background:rgba(255,255,255,.04);color:var(--text-muted);padding:3px 8px;border-radius:4px">Bco: {{ a.votos_blanco }}</span>
+                    <span style="background:rgba(255,255,255,.04);color:var(--text-muted);padding:3px 8px;border-radius:4px">Nulo: {{ a.votos_nulos }}</span>
+                    <span style="background:rgba(255,255,255,.04);color:var(--text-muted);padding:3px 8px;border-radius:4px">Vic: {{ a.votos_viciados }}</span>
+                    <span style="background:rgba(255,255,255,.08);color:white;padding:3px 8px;border-radius:4px;font-weight:700">Total: {{ a.total_votos }}</span>
+                  </div>
+                </div>
+                
+                {% if a.foto_acta %}
+                  <div style="text-align:right">
+                    <a href="{{ a.foto_acta.url }}" target="_blank" style="display:inline-block;text-align:center;text-decoration:none">
+                      <img src="{{ a.foto_acta.url }}" alt="Foto acta" style="width:70px;height:50px;object-fit:cover;border-radius:4px;border:1px solid rgba(255,255,255,.1)">
+                      <div style="font-size:10px;color:var(--jp-green);margin-top:2px;font-weight:600">🔍 Ver Foto</div>
+                    </a>
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
 
 {% endif %}
 {% endblock %}
 
 {% block extra_scripts %}
-{% if personero.perfil_completado and personero.centro_votacion and personero.numero_mesa and not acta %}
+{% if personero.perfil_completado and personero.centro_votacion and personero.numero_mesa %}
 <script>
 (function() {
   'use strict';

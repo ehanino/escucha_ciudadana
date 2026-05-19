@@ -304,7 +304,7 @@ def reportar_escrutinio_view(request):
         messages.error(request, 'No tienes un perfil de personero asociado.')
         return redirect('personeros:login')
 
-    acta = getattr(personero, 'acta', None)
+    actas_reportadas = personero.actas.all().order_by('-fecha_registro')
     form_acta = None
 
     if request.method == 'POST':
@@ -314,30 +314,44 @@ def reportar_escrutinio_view(request):
         if not personero.centro_votacion or not personero.numero_mesa:
             messages.error(request, 'Debes tener un local y una mesa asignados para reportar.')
             return redirect('personeros:reportar_escrutinio')
-        if acta:
-            messages.warning(request, 'El escrutinio de tu mesa ya fue reportado.')
-            return redirect('personeros:reportar_escrutinio')
 
         form_acta = ActaElectoralForm(request.POST, request.FILES)
         if form_acta.is_valid():
+            numero_mesa = form_acta.cleaned_data.get('numero_mesa', '').strip()
+            
+            # Validar si esta mesa ya fue reportada en este local de votación
+            if ActaElectoral.objects.filter(centro_votacion=personero.centro_votacion, numero_mesa=numero_mesa).exists():
+                messages.error(request, f'La mesa {numero_mesa} de tu local ya fue reportada.')
+                # Volver a cargar el formulario con el error
+                context = {
+                    'personero':        personero,
+                    'actas_reportadas': actas_reportadas,
+                    'form_acta':        form_acta,
+                }
+                return render(request, 'personeros/reportar_escrutinio.html', context)
+
             a = form_acta.save(commit=False)
             a.personero = personero
             a.centro_votacion = personero.centro_votacion
-            a.numero_mesa = personero.numero_mesa
             a.save()
-            messages.success(request, '¡Resultados de la mesa guardados con éxito!')
+            messages.success(request, f'¡Resultados de la mesa {numero_mesa} guardados con éxito!')
             return redirect('personeros:reportar_escrutinio')
         else:
             messages.error(request, 'Hubo un error al validar los datos del conteo de votos.')
     else:
-        form_acta = ActaElectoralForm(instance=acta)
+        # Pre-rellenar con la mesa preasignada al personero si no ha reportado nada aún
+        initial_data = {}
+        if personero.numero_mesa and not actas_reportadas.filter(numero_mesa=personero.numero_mesa).exists():
+            initial_data['numero_mesa'] = personero.numero_mesa
+        form_acta = ActaElectoralForm(initial=initial_data)
 
     context = {
-        'personero': personero,
-        'acta':      acta,
-        'form_acta': form_acta,
+        'personero':        personero,
+        'actas_reportadas': actas_reportadas,
+        'form_acta':        form_acta,
     }
     return render(request, 'personeros/reportar_escrutinio.html', context)
+
 
 
 # ── APIs para selectores en cascada ───────────────────────────────────────────

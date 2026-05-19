@@ -147,3 +147,8 @@ STATICFILES_DIRS = [
 
 # Configuración para Proxy SSL (AWS Nginx)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Solución para el bug de MIME type de Windows en desarrollo
+import mimetypes
+mimetypes.add_type("text/css", ".css", True)
+mimetypes.add_type("application/javascript", ".js", True)

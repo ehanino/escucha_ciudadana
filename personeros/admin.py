@@ -124,7 +124,7 @@ class PersoneroAdmin(admin.ModelAdmin):
                 direccion,
                 nombre_corto,
             )
-        return format_html('<span style="color:#94a3b8;font-size:11px">Sin asignar</span>')
+        return format_html('<span style="color:#94a3b8;font-size:11px">{}</span>', 'Sin asignar')
     centro_display.short_description = 'Centro de Votacion'
 
     # ── Badge estado ──────────────────────────────────────────────
