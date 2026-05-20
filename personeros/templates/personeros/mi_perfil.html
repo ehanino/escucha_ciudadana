@@ -176,8 +176,8 @@
         <!-- Departamento -->
         <div class="form-group">
           <label class="form-label" for="{{ form.departamento.id_for_label }}">Departamento</label>
-          {% if readonly %}
-            <div class="info-field">{{ personero.get_departamento_display_nombre|default:"No registrado" }}</div>
+          {% if readonly or centro_preasignado %}
+            <div class="info-field">{{ personero.departamento|default:"No registrado" }}</div>
           {% else %}
             {{ form.departamento }}
           {% endif %}
@@ -186,7 +186,7 @@
         <!-- Provincia -->
         <div class="form-group">
           <label class="form-label" for="{{ form.provincia.id_for_label }}">Provincia</label>
-          {% if readonly %}
+          {% if readonly or centro_preasignado %}
             <div class="info-field">{{ personero.provincia|default:"No registrada" }}</div>
           {% else %}
             {{ form.provincia }}
@@ -315,31 +315,112 @@
 (function () {
   'use strict';
 
-  const API_CENTROS   = "{% url 'personeros:api_centros' %}";
+  const API_PROVINCIAS = "{% url 'personeros:api_provincias' %}";
+  const API_DISTRITOS  = "{% url 'personeros:api_distritos' %}";
+  const API_CENTROS    = "{% url 'personeros:api_centros' %}";
+
+  const selDepto      = document.getElementById('id_departamento');
+  const selProv       = document.getElementById('id_provincia');
   const selDistrito   = document.getElementById('id_distrito');
   const selCentro     = document.getElementById('id_centro_votacion');
   const spinner       = document.getElementById('centros-spinner');
   const preview       = document.getElementById('centro-direccion-preview');
 
-  // Valor inicial (si el form regresa con error de validación)
-  const valorInicial  = "{{ form.centro_votacion.value|default:'' }}";
+  // Valores iniciales (útil tras error de validación)
+  const deptoInicial  = "{{ form.departamento.value|default:'' }}";
+  const provInicial   = "{{ form.provincia.value|default:'' }}";
+  const distInicial   = "{{ form.distrito.value|default:'' }}";
+  const centroInicial = "{{ form.centro_votacion.value|default:'' }}";
 
-  async function cargarCentros(distrito) {
-    if (!distrito) {
+  async function cargarProvincias(deptoId, preselectId = '') {
+    if (!deptoId) {
+      selProv.innerHTML = '<option value="">— Seleccione Provincia —</option>';
+      selProv.disabled = true;
+      selDistrito.innerHTML = '<option value="">— Seleccione Distrito —</option>';
+      selDistrito.disabled = true;
       selCentro.innerHTML = '<option value="">— Primero selecciona un distrito —</option>';
-      selCentro.disabled  = true;
-      preview.classList.remove('visible');
+      selCentro.disabled = true;
+      if (preview) preview.classList.remove('visible');
       return;
     }
 
-    // Mostrar spinner
-    spinner.style.display = 'block';
-    selCentro.disabled = true;
-    selCentro.innerHTML = '<option value="">Cargando centros…</option>';
-    preview.classList.remove('visible');
+    try {
+      const res = await fetch(`${API_PROVINCIAS}?departamento=${encodeURIComponent(deptoId)}`);
+      const data = await res.json();
+
+      let html = '<option value="">Seleccione Provincia</option>';
+      data.provincias.forEach(p => {
+        const sel = (String(p.id_ubigeo) === String(preselectId)) ? ' selected' : '';
+        html += `<option value="${p.id_ubigeo}"${sel}>${p.nombre}</option>`;
+      });
+      selProv.innerHTML = html;
+      selProv.disabled = false;
+
+      // Limpiar y deshabilitar los selectores descendientes
+      selDistrito.innerHTML = '<option value="">— Seleccione Distrito —</option>';
+      selDistrito.disabled = true;
+      selCentro.innerHTML = '<option value="">— Primero selecciona un distrito —</option>';
+      selCentro.disabled = true;
+      if (preview) preview.classList.remove('visible');
+
+      if (preselectId) {
+        await cargarDistritos(preselectId, distInicial);
+      }
+    } catch (e) {
+      console.error('Error al cargar provincias:', e);
+    }
+  }
+
+  async function cargarDistritos(provId, preselectId = '') {
+    if (!provId) {
+      selDistrito.innerHTML = '<option value="">— Seleccione Distrito —</option>';
+      selDistrito.disabled = true;
+      selCentro.innerHTML = '<option value="">— Primero selecciona un distrito —</option>';
+      selCentro.disabled = true;
+      if (preview) preview.classList.remove('visible');
+      return;
+    }
 
     try {
-      const res  = await fetch(`${API_CENTROS}?distrito=${encodeURIComponent(distrito)}`);
+      const res = await fetch(`${API_DISTRITOS}?provincia=${encodeURIComponent(provId)}`);
+      const data = await res.json();
+
+      let html = '<option value="">Seleccione Distrito</option>';
+      data.distritos.forEach(d => {
+        const sel = (String(d.id_ubigeo) === String(preselectId)) ? ' selected' : '';
+        html += `<option value="${d.id_ubigeo}"${sel}>${d.nombre}</option>`;
+      });
+      selDistrito.innerHTML = html;
+      selDistrito.disabled = false;
+
+      // Limpiar y deshabilitar centros
+      selCentro.innerHTML = '<option value="">— Primero selecciona un distrito —</option>';
+      selCentro.disabled = true;
+      if (preview) preview.classList.remove('visible');
+
+      if (preselectId) {
+        await cargarCentros(preselectId, centroInicial);
+      }
+    } catch (e) {
+      console.error('Error al cargar distritos:', e);
+    }
+  }
+
+  async function cargarCentros(distId, preselectId = '') {
+    if (!distId) {
+      selCentro.innerHTML = '<option value="">— Primero selecciona un distrito —</option>';
+      selCentro.disabled = true;
+      if (preview) preview.classList.remove('visible');
+      return;
+    }
+
+    if (spinner) spinner.style.display = 'block';
+    selCentro.disabled = true;
+    selCentro.innerHTML = '<option value="">Cargando centros…</option>';
+    if (preview) preview.classList.remove('visible');
+
+    try {
+      const res = await fetch(`${API_CENTROS}?distrito=${encodeURIComponent(distId)}`);
       const data = await res.json();
 
       if (!data.centros || data.centros.length === 0) {
@@ -347,29 +428,27 @@
         return;
       }
 
-      // Construir opciones
       let html = '<option value="">— Selecciona tu centro de votación —</option>';
       data.centros.forEach(c => {
-        const sel = (String(c.id) === valorInicial) ? ' selected' : '';
+        const sel = (String(c.id) === String(preselectId)) ? ' selected' : '';
         html += `<option value="${c.id}" data-dir="${c.direccion}"${sel}>${c.nombre}</option>`;
       });
       selCentro.innerHTML = html;
-      selCentro.disabled  = false;
+      selCentro.disabled = false;
 
-      // Mostrar dirección si hay un valor pre-seleccionado
       actualizarPreview();
-
     } catch (e) {
       selCentro.innerHTML = '<option value="">Error cargando centros</option>';
       console.error('Error al cargar centros:', e);
     } finally {
-      spinner.style.display = 'none';
+      if (spinner) spinner.style.display = 'none';
     }
   }
 
   function actualizarPreview() {
+    if (!preview) return;
     const opt = selCentro.options[selCentro.selectedIndex];
-    if (opt && opt.dataset.dir) {
+    if (opt && opt.dataset.dir && opt.value) {
       preview.textContent  = '📍 ' + opt.dataset.dir;
       preview.classList.add('visible');
     } else {
@@ -378,12 +457,20 @@
   }
 
   // Eventos
+  selDepto.addEventListener('change', () => cargarProvincias(selDepto.value));
+  selProv.addEventListener('change', () => cargarDistritos(selProv.value));
   selDistrito.addEventListener('change', () => cargarCentros(selDistrito.value));
-  selCentro.addEventListener('change', actualizarPreview);
+  if (selCentro) {
+    selCentro.addEventListener('change', actualizarPreview);
+  }
 
-  // Al cargar la página: si ya hay un distrito seleccionado (vuelta tras error), recargar centros
-  if (selDistrito.value) {
-    cargarCentros(selDistrito.value);
+  // Inicialización
+  if (selDepto && selDepto.value) {
+    cargarProvincias(selDepto.value, provInicial);
+  } else {
+    if (selProv) selProv.disabled = true;
+    if (selDistrito) selDistrito.disabled = true;
+    if (selCentro) selCentro.disabled = true;
   }
 })();
 </script>

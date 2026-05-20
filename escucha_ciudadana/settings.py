@@ -33,7 +33,11 @@ environ.Env.read_env(BASE_DIR / '.env')
 SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
+# Forzar DEBUG=True en entorno local Windows para evitar sobreescritura accidental del entorno
+if os.name == 'nt':
+    DEBUG = True
+else:
+    DEBUG = env('DEBUG')
 
 # Google Analytics
 GOOGLE_ANALYTICS_ID = env('GOOGLE_ANALYTICS_ID', default=None)
