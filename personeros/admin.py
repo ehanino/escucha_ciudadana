@@ -34,7 +34,7 @@ class DistritoAdmin(admin.ModelAdmin):
 @admin.register(CentroVotacion)
 class CentroVotacionAdmin(admin.ModelAdmin):
     form = CentroVotacionAdminForm
-    list_display  = ('nombre', 'distrito', 'get_provincia', 'get_departamento', 'direccion', 'total_personeros')
+    list_display  = ('nombre', 'distrito', 'get_provincia', 'get_departamento', 'direccion', 'actas', 'total_personeros')
     list_filter   = ('distrito__provincia__departamento', 'distrito__provincia', 'distrito')
     search_fields = ('nombre', 'direccion', 'distrito__nombre')
     ordering      = ('distrito', 'nombre')
@@ -44,7 +44,7 @@ class CentroVotacionAdmin(admin.ModelAdmin):
             'fields': ('departamento', 'provincia', 'distrito')
         }),
         ('Información del Centro', {
-            'fields': ('nombre', 'direccion')
+            'fields': ('nombre', 'direccion', 'actas')
         }),
     )
 

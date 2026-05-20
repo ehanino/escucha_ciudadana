@@ -76,6 +76,7 @@ class CentroVotacion(models.Model):
     distrito  = models.ForeignKey(Distrito, on_delete=models.SET_NULL, null=True, blank=True, related_name='centros')
     nombre    = models.CharField(max_length=300, verbose_name='Centro de Votación')
     direccion = models.CharField(max_length=300, blank=True, verbose_name='Dirección')
+    actas     = models.IntegerField(default=0, verbose_name='Actas')
 
     class Meta:
         verbose_name        = 'Centro de Votación'
