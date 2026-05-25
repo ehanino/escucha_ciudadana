@@ -113,7 +113,7 @@ class CentroVotacionAdminForm(forms.ModelForm):
 
     class Meta:
         model = CentroVotacion
-        fields = ['departamento', 'provincia', 'distrito', 'nombre', 'direccion', 'actas']
+        fields = ['departamento', 'provincia', 'distrito', 'nombre', 'direccion', 'actas', 'electores']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

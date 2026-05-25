@@ -77,6 +77,7 @@ class CentroVotacion(models.Model):
     nombre    = models.CharField(max_length=300, verbose_name='Centro de Votación')
     direccion = models.CharField(max_length=300, blank=True, verbose_name='Dirección')
     actas     = models.IntegerField(default=0, verbose_name='Actas')
+    electores = models.IntegerField(default=0, verbose_name='Electores')
 
     class Meta:
         verbose_name        = 'Centro de Votación'
