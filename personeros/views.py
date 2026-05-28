@@ -724,9 +724,15 @@ def descargar_credencial_view(request, pk):
                 status=500
             )
 
+        # Usar un perfil de usuario temporal de LibreOffice en el directorio temporal para evitar 
+        # problemas de permisos de escritura (muy común al ejecutar soffice headless bajo Gunicorn/www-data)
+        user_profile_path = os.path.join(temp_dir, 'libreoffice_profile')
+        user_profile_url = f"file:///{user_profile_path.replace(os.sep, '/')}"
+
         command = [
             soffice_path,
             "--headless",
+            f"-env:UserInstallation={user_profile_url}",
             "--convert-to",
             "pdf",
             "--outdir",
