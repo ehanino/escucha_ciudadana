@@ -621,13 +621,14 @@ def descargar_credencial_view(request, pk):
 
         # Configurar anchos proporcionales alineados a la perfección con la Tabla 1 (total 6.15 pulgadas)
         # Al tener anchos iguales a la izquierda y derecha, la celda del centro queda perfectamente centrada
-        cell_left.width = Inches(0.90)
-        cell_middle.width = Inches(4.35)
-        cell_right.width = Inches(0.90)
+        # Usamos 1.10" para izquierda y derecha y 3.95" en el centro para dar un margen de seguridad de 0.20" al QR a la derecha
+        cell_left.width = Inches(1.10)
+        cell_middle.width = Inches(3.95)
+        cell_right.width = Inches(1.10)
 
         # Configurar explícitamente los anchos en la cuadrícula de la tabla para asegurar que Word y LibreOffice los respeten
         for i, col in enumerate(table_top.columns):
-            col.width = [Inches(0.90), Inches(4.35), Inches(0.90)][i]
+            col.width = [Inches(1.10), Inches(3.95), Inches(1.10)][i]
 
         # Mover los párrafos de título originales a la celda del medio
         p0_elem.getparent().remove(p0_elem)
@@ -651,14 +652,15 @@ def descargar_credencial_view(request, pk):
         cell_middle.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         cell_middle.paragraphs[1].alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-        # Insertar el QR en la celda derecha centrado verticalmente y alineado a la derecha
+        # Insertar el QR en la celda derecha centrado verticalmente y alineado a la IZQUIERDA del cell_right 
+        # (Esto crea exactamente 0.20 pulgadas / 5 mm de espacio de seguridad al borde derecho del papel)
         cell_right.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
         if not cell_right.paragraphs:
             p_qr = cell_right.add_paragraph()
         else:
             p_qr = cell_right.paragraphs[0]
         p_qr.text = ""
-        p_qr.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p_qr.alignment = WD_ALIGN_PARAGRAPH.LEFT
         p_qr.paragraph_format.space_before = Pt(0)
         p_qr.paragraph_format.space_after = Pt(0)
 
