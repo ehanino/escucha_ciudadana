@@ -223,6 +223,7 @@ def lista_view(request):
     q          = request.GET.get('q', '')
     estado     = request.GET.get('estado', '')
     dpto_id    = request.GET.get('departamento', '')
+    cargo      = request.GET.get('cargo', '')
 
     if q:
         qs = qs.filter(
@@ -236,14 +237,18 @@ def lista_view(request):
         qs = qs.filter(estado=estado)
     if dpto_id:
         qs = qs.filter(distrito__provincia__departamento__id_ubigeo=dpto_id)
+    if cargo:
+        qs = qs.filter(cargo=cargo)
 
     context = {
         'perfil':       perfil,
         'personeros':   qs.order_by('apellido_paterno'),
         'departamentos': Departamento.objects.all(),
+        'cargo_choices': Personero.CARGO_CHOICES,
         'q':            q,
         'estado_sel':   estado,
         'dpto_sel':     dpto_id,
+        'cargo_sel':    cargo,
         'total':        qs.count(),
     }
     return render(request, 'personeros/lista.html', context)
@@ -411,6 +416,7 @@ def exportar_excel_view(request):
     q          = request.GET.get('q', '')
     estado     = request.GET.get('estado', '')
     dpto_id    = request.GET.get('departamento', '')
+    cargo      = request.GET.get('cargo', '')
 
     if q:
         qs = qs.filter(
@@ -424,6 +430,8 @@ def exportar_excel_view(request):
         qs = qs.filter(estado=estado)
     if dpto_id:
         qs = qs.filter(distrito__provincia__departamento__id_ubigeo=dpto_id)
+    if cargo:
+        qs = qs.filter(cargo=cargo)
 
     # Ordenar por apellido paterno
     qs = qs.order_by('apellido_paterno')

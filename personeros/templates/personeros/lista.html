@@ -25,7 +25,7 @@
     <h1 class="page-title">Personeros</h1>
     <p class="page-subtitle">{{ total }} resultado{{ total|pluralize }} encontrado{{ total|pluralize }}</p>
   </div>
-  {% if personeros or q or estado_sel or dpto_sel %}
+  {% if personeros or q or estado_sel or dpto_sel or cargo_sel %}
   <a href="{% url 'personeros:exportar_excel' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-green" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 20px; font-weight: 600; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s;">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width: 18px; height: 18px;">
       <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -57,8 +57,14 @@
           <option value="{{ dpto.id_ubigeo }}" {% if dpto_sel == dpto.id_ubigeo %}selected{% endif %}>{{ dpto.nombre }}</option>
         {% endfor %}
       </select>
+      <select name="cargo" class="select-filter">
+        <option value="">Todos los cargos</option>
+        {% for code, name in cargo_choices %}
+          <option value="{{ code }}" {% if cargo_sel == code %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
       <button type="submit" class="btn btn-green" style="padding:8px 16px">Filtrar</button>
-      {% if q or estado_sel or dpto_sel %}
+      {% if q or estado_sel or dpto_sel or cargo_sel %}
         <a href="{% url 'personeros:lista' %}" class="btn btn-ghost" style="padding:8px 14px">Limpiar</a>
       {% endif %}
     </form>
