@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificación Oficial de Credencial | JPP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f1c12 0%, #050a06 100%);
+      --valid-green: #10b981;
+      --invalid-red: #ef4444;
+      --valid-bg-glow: rgba(16, 185, 129, 0.15);
+      --invalid-bg-glow: rgba(239, 68, 68, 0.15);
+      --card-bg: rgba(255, 255, 255, 0.04);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-primary: #f3f4f6;
+      --text-muted: #9ca3af;
+      --jp-green: #39b54a;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-primary);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 440px;
+      animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .brand-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .brand-header img {
+      height: 48px;
+      width: auto;
+      filter: drop-shadow(0 4px 12px rgba(57, 181, 74, 0.3));
+    }
+
+    .brand-header h2 {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--jp-green);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    /* Ticket Card styling */
+    .ticket-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Glow overlays depending on validity */
+    .ticket-card::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, {% if es_valida %}var(--valid-bg-glow){% else %}var(--invalid-bg-glow){% endif %} 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .status-banner {
+      padding: 32px 24px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+      border-bottom: 1px dashed rgba(255, 255, 255, 0.12);
+    }
+
+    /* Dotted separator visual cut-outs (ticket style) */
+    .ticket-card::after {
+      content: '';
+      position: absolute;
+      left: -10px;
+      right: -10px;
+      top: 154px; /* Matches the bottom of the status banner */
+      height: 20px;
+      background-image: 
+        radial-gradient(circle at left, transparent 10px, var(--card-border) 10px, transparent 11px),
+        radial-gradient(circle at right, transparent 10px, var(--card-border) 10px, transparent 11px);
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .status-badge {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      box-shadow: 0 0 20px {% if es_valida %}rgba(16, 185, 129, 0.3){% else %}rgba(239, 68, 68, 0.3){% endif %};
+      animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    .status-badge-valid {
+      background: var(--valid-green);
+    }
+
+    .status-badge-invalid {
+      background: var(--invalid-red);
+    }
+
+    .status-badge svg {
+      width: 36px;
+      height: 36px;
+      color: #fff;
+    }
+
+    .status-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+      color: {% if es_valida %}var(--valid-green){% else %}var(--invalid-red){% endif %};
+    }
+
+    .status-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* Ticket content */
+    .ticket-details {
+      padding: 32px 24px 24px 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .profile-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--jp-green);
+      flex-shrink: 0;
+    }
+
+    .profile-info {
+      flex-grow: 1;
+    }
+
+    .personero-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      line-height: 1.3;
+    }
+
+    .personero-dni {
+      font-size: 13px;
+      font-family: monospace;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .data-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .data-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      padding: 12px 16px;
+      border-radius: 14px;
+    }
+
+    .data-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .data-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      line-height: 1.4;
+    }
+
+    .badge-cargo {
+      background: rgba(57, 181, 74, 0.15);
+      color: #5fe072;
+      border: 1px solid rgba(57, 181, 74, 0.25);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 32px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer p {
+      margin-bottom: 4px;
+    }
+
+    .footer-secure {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--jp-green);
+      font-weight: 500;
+      margin-top: 8px;
+    }
+
+    /* Keyframes */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes popIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.6);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Brand Header -->
+    <div class="brand-header">
+      <img src="/static/images/JuntosPorElPeru.png" alt="Logo Juntos por el Perú" onerror="this.style.display='none'">
+      <h2>Juntos por el Perú</h2>
+    </div>
+
+    <!-- Ticket Validation Card -->
+    <div class="ticket-card">
+      
+      <!-- Status Banner -->
+      <div class="status-banner">
+        {% if es_valida %}
+          <div class="status-badge status-badge-valid">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 class="status-title">Credencial Válida</h1>
+          <p class="status-subtitle">Personero acreditado oficialmente en el sistema</p>
+        {% else %}
+          <div class="status-badge status-badge-invalid">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <h1 class="status-title">Credencial Inválida</h1>
+          <p class="status-subtitle">Este personero no se encuentra activo o confirmado</p>
+        {% endif %}
+      </div>
+
+      <!-- Ticket Details -->
+      <div class="ticket-details">
+        
+        <!-- Profile info -->
+        <div class="profile-section">
+          <div class="avatar">
+            {{ personero.nombres|first }}{{ personero.apellido_paterno|first }}
+          </div>
+          <div class="profile-info">
+            <h3 class="personero-name">{{ personero.nombre_completo }}</h3>
+            <span class="personero-dni">DNI: {{ personero.dni }}</span>
+          </div>
+        </div>
+
+        <!-- Data Grid -->
+        <div class="data-grid">
+          
+          <div class="data-item">
+            <div class="data-label">Cargo Asignado</div>
+            <div class="data-value">
+              <span class="badge-cargo">{{ personero.get_cargo_display }}</span>
+            </div>
+          </div>
+
+          <div class="data-item">
+            <div class="data-label">Local de Votación</div>
+            <div class="data-value">{{ personero.centro_votacion.nombre|default:"—" }}</div>
+          </div>
+
+          {% if personero.numero_mesa %}
+          <div class="data-item">
+            <div class="data-label">Mesa de Sufragio</div>
+            <div class="data-value" style="font-family: monospace; font-size: 15px; font-weight: 600;">
+              Nº {{ personero.numero_mesa }}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="data-item">
+            <div class="data-label">Ubicación Geográfica</div>
+            <div class="data-value">
+              {% if personero.distrito %}
+                {{ personero.distrito.nombre }}, {{ personero.provincia.nombre }} — {{ personero.departamento.nombre }}
+              {% else %}
+                —
+              {% endif %}
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Secure verification Footer -->
+    <div class="footer">
+      <p>© 2026 Plataforma Electoral Escucha Ciudadana</p>
+      <div class="footer-secure">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;">
+          <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944a11.954 11.954 0 007.834 3.056 10.03 10.03 0 01-1.748 5.617 11.97 11.97 0 01-4.842 3.411 12.44 12.44 0 01-1.244.38 1.252 1.252 0 01-.8 0c-.426-.13-.842-.258-1.243-.38a11.972 11.972 0 01-4.843-3.41 10.03 10.03 0 01-1.748-5.618zm7.833 1.001a1 1 0 00-1 1v3a1 1 0 002 0v-3a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        <span>Validación de Seguridad Cifrada</span>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

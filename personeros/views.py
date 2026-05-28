@@ -492,6 +492,294 @@ def exportar_excel_view(request):
     return response
 
 
+@login_required(login_url='personeros:login')
+def descargar_credencial_view(request, pk):
+    """Genera y descarga la credencial del personero en formato PDF."""
+    import os
+    import platform
+    import subprocess
+    import docx
+    from django.http import Http404
+
+    # 1. Obtener el personero
+    personero = get_object_or_404(Personero, pk=pk)
+
+    # 2. Verificar permisos
+    perfil = get_perfil(request.user)
+    is_owner = False
+    try:
+        is_owner = (request.user.personero.pk == personero.pk)
+    except Exception:
+        pass
+
+    # Permitir si es superusuario, si no tiene perfil (se asume admin en la app),
+    # o si su perfil es de admin/coordinador, o si es el propio personero.
+    has_permission = (
+        request.user.is_superuser or
+        not perfil or
+        perfil.es_superadmin or
+        perfil.es_coordinador or
+        is_owner
+    )
+
+    if not has_permission:
+        return HttpResponse("No tienes permisos para descargar esta credencial.", status=403)
+
+    # 3. Ruta de la plantilla docx
+    template_path = os.path.join(settings.BASE_DIR, 'docs', 'Credencial personero centro de votación.docx')
+    if not os.path.exists(template_path):
+        raise Http404("La plantilla de credencial no se encuentra en el servidor.")
+
+    temp_docx_path = None
+    temp_pdf_path = None
+
+    try:
+        # Helper para formatear, alinear y centrar vertical y horizontalmente las celdas
+        def set_cell_text(cell, text, bold=False, size_pt=None):
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
+            from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+            from docx.shared import Pt
+
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            if not cell.paragraphs:
+                p = cell.add_paragraph()
+            else:
+                p = cell.paragraphs[0]
+
+            p.text = ""
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+            run = p.add_run(text)
+            if bold:
+                run.bold = True
+            if size_pt:
+                run.font.size = Pt(size_pt)
+            run.font.name = 'Arial'
+
+        # 4. Modificar el archivo docx con los datos del personero
+        doc = docx.Document(template_path)
+
+        # Configurar la hoja en formato A4 (21.0 cm x 29.7 cm) para compatibilidad estándar
+        from docx.shared import Cm
+        for section in doc.sections:
+            section.page_width = Cm(21.0)
+            section.page_height = Cm(29.7)
+
+        # Obtener referencias a las tablas originales del documento antes de crear la tabla superior
+        table1 = doc.tables[0]
+        table2 = doc.tables[1]
+
+        # Llenar Tabla 1 (Nombres y DNI) - Centrado, Negrita y Letra más grande (12pt)
+        set_cell_text(table1.rows[0].cells[1], personero.nombre_completo.upper(), bold=True, size_pt=12)
+        set_cell_text(table1.rows[1].cells[1], personero.dni, bold=True, size_pt=12)
+
+        # Generar código QR de seguridad dinámico en memoria
+        import qrcode
+        import io
+        from docx.shared import Inches, Pt
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+
+        if not personero.token_uuid:
+            import uuid
+            personero.token_uuid = uuid.uuid4()
+            personero.save(update_fields=['token_uuid'])
+
+        # Generar URL de validación pública
+        qr_url = f"https://{request.get_host()}/personeros/validar/credencial/{personero.token_uuid}/"
+        
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=1,
+        )
+        qr.add_data(qr_url)
+        qr.make(fit=True)
+
+        qr_img = qr.make_image(fill_color="black", back_color="white")
+        qr_buffer = io.BytesIO()
+        qr_img.save(qr_buffer, format="PNG")
+        qr_buffer.seek(0)
+
+        # Obtener referencias a los párrafos originales ANTES de modificar el documento
+        p0_elem = doc.paragraphs[0]._element
+        p1_elem = doc.paragraphs[1]._element
+
+        # Crear una tabla invisible de maquetación de 1x3 en la parte superior para centrar los títulos y alinear el QR a la derecha
+        table_top = doc.add_table(rows=1, cols=3)
+        table_top.autofit = False
+
+        # Mover la tabla al inicio absoluto de la estructura del documento
+        tbl = table_top._tbl
+        doc.element.body.remove(tbl)
+        doc.element.body.insert(0, tbl)
+
+        cell_left = table_top.rows[0].cells[0]
+        cell_middle = table_top.rows[0].cells[1]
+        cell_right = table_top.rows[0].cells[2]
+
+        # Configurar anchos proporcionales alineados a la perfección con la Tabla 1 (total 6.15 pulgadas)
+        # Al tener anchos iguales a la izquierda y derecha, la celda del centro queda perfectamente centrada
+        cell_left.width = Inches(0.90)
+        cell_middle.width = Inches(4.35)
+        cell_right.width = Inches(0.90)
+
+        # Configurar explícitamente los anchos en la cuadrícula de la tabla para asegurar que Word y LibreOffice los respeten
+        for i, col in enumerate(table_top.columns):
+            col.width = [Inches(0.90), Inches(4.35), Inches(0.90)][i]
+
+        # Mover los párrafos de título originales a la celda del medio
+        p0_elem.getparent().remove(p0_elem)
+        p1_elem.getparent().remove(p1_elem)
+
+        cell_middle._tc.append(p0_elem)
+        cell_middle._tc.append(p1_elem)
+
+        # Eliminar el párrafo vacío por defecto en la celda del medio
+        default_p_mid = cell_middle.paragraphs[0]._element
+        default_p_mid.getparent().remove(default_p_mid)
+
+        # Limpiar el párrafo por defecto en la celda izquierda y hacerlo de tamaño mínimo para no agregar altura extra
+        p_left = cell_left.paragraphs[0]
+        p_left.text = ""
+        p_left.paragraph_format.space_before = Pt(0)
+        p_left.paragraph_format.space_after = Pt(0)
+        p_left.paragraph_format.line_spacing = Pt(1)
+
+        # Centrar ambos párrafos en la celda del medio, para que queden perfectamente alineados
+        cell_middle.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cell_middle.paragraphs[1].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        # Insertar el QR en la celda derecha centrado verticalmente y alineado a la derecha
+        cell_right.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+        if not cell_right.paragraphs:
+            p_qr = cell_right.add_paragraph()
+        else:
+            p_qr = cell_right.paragraphs[0]
+        p_qr.text = ""
+        p_qr.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p_qr.paragraph_format.space_before = Pt(0)
+        p_qr.paragraph_format.space_after = Pt(0)
+
+        run_qr = p_qr.add_run()
+        run_qr.add_picture(qr_buffer, width=Inches(0.9), height=Inches(0.9))
+
+        # Llenar Tabla 2 (Local de Votación y ubicación) - Centrado utilizando la referencia original
+        cv_nombre = personero.centro_votacion.nombre.upper() if personero.centro_votacion else "SIN ASIGNAR"
+        cv_direccion = personero.centro_votacion.direccion.upper() if personero.centro_votacion and personero.centro_votacion.direccion else "SIN DIRECCIÓN"
+
+        dist = personero.distrito.nombre.upper() if personero.distrito else "—"
+        prov = personero.provincia.nombre.upper() if personero.distrito and personero.distrito.provincia else "—"
+        dpto = personero.departamento.nombre.upper() if personero.departamento else "—"
+        ubicacion = f"{dist}, {prov}, {dpto}"
+
+        set_cell_text(table2.rows[0].cells[1], cv_nombre, bold=False, size_pt=11)
+        set_cell_text(table2.rows[1].cells[1], cv_direccion, bold=False, size_pt=10)
+        set_cell_text(table2.rows[2].cells[1], ubicacion, bold=False, size_pt=11)
+
+        # Ajustar tamaños de letra: Firma PERSONERO LEGAL ANTE EL JEE DEL CALLAO (a 8pt)
+        # y reglamento de personeros (a 7pt)
+        en_reglamento = False
+        for p in doc.paragraphs:
+            text_upper = p.text.upper()
+            if "PERSONERO LEGAL ANTE EL JEE DEL CALLAO" in text_upper:
+                for run in p.runs:
+                    run.font.size = Pt(8.0)
+
+            if "REGLAMENTO SOBRE LA PARTICIPACI" in text_upper:
+                en_reglamento = True
+
+            if en_reglamento:
+                for run in p.runs:
+                    run.font.size = Pt(7.0)
+
+        # 5. Crear nombres de archivos temporales
+        temp_dir = os.path.join(settings.BASE_DIR, 'temp_credentials')
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
+
+        safe_dni = personero.dni
+        temp_docx_filename = f"credencial_{safe_dni}.docx"
+        temp_pdf_filename = f"credencial_{safe_dni}.pdf"
+
+        temp_docx_path = os.path.join(temp_dir, temp_docx_filename)
+        temp_pdf_path = os.path.join(temp_dir, temp_pdf_filename)
+
+        # Guardar docx modificado
+        doc.save(temp_docx_path)
+
+        # 6. Convertir a PDF con LibreOffice
+        soffice_path = getattr(settings, 'SOFFICE_PATH', None)
+        if not soffice_path:
+            if platform.system() == 'Windows':
+                soffice_path = r"C:\Program Files\LibreOffice\program\soffice.exe"
+            else:
+                soffice_path = "soffice"
+
+        # Verificar existencia si es Windows para dar un mensaje claro
+        if platform.system() == 'Windows' and not os.path.exists(soffice_path):
+            return HttpResponse(
+                "Error en el servidor: LibreOffice no se encuentra instalado en la ruta estándar de Windows.",
+                status=500
+            )
+
+        command = [
+            soffice_path,
+            "--headless",
+            "--convert-to",
+            "pdf",
+            "--outdir",
+            temp_dir,
+            temp_docx_path
+        ]
+
+        # Ejecutar la conversión de forma síncrona
+        result = subprocess.run(command, capture_output=True, text=True, timeout=30)
+
+        if result.returncode != 0 or not os.path.exists(temp_pdf_path):
+            return HttpResponse(
+                f"Error al generar el PDF: {result.stderr or 'Error desconocido en LibreOffice'}",
+                status=500
+            )
+
+        # 7. Leer el archivo PDF generado para retornarlo
+        with open(temp_pdf_path, 'rb') as f:
+            pdf_data = f.read()
+
+        # 8. Responder con el archivo PDF para descarga
+        response = HttpResponse(pdf_data, content_type='application/pdf')
+        clean_name = personero.nombre_completo.replace(' ', '_').lower()
+        response['Content-Disposition'] = f'attachment; filename="credencial_{clean_name}_{safe_dni}.pdf"'
+        return response
+
+    except Exception as e:
+        return HttpResponse(f"Ocurrió un error inesperado al procesar la credencial: {str(e)}", status=500)
+    finally:
+        # 9. Limpieza de archivos temporales
+        try:
+            if temp_docx_path and os.path.exists(temp_docx_path):
+                os.remove(temp_docx_path)
+            if temp_pdf_path and os.path.exists(temp_pdf_path):
+                os.remove(temp_pdf_path)
+        except Exception:
+            pass
+
+
+def validar_credencial_publica_view(request, token_uuid):
+    """Vista pública para validar una credencial mediante código QR sin requerir inicio de sesión."""
+    personero = get_object_or_404(Personero, token_uuid=token_uuid)
+    
+    # La credencial se considera válida si el personero está confirmado y su perfil se completó
+    es_valida = (personero.estado == 'confirmado')
+    
+    context = {
+        'personero': personero,
+        'es_valida': es_valida,
+    }
+    return render(request, 'personeros/validar_credencial.html', context)
+
+
 def handler404_redirect(request, exception=None):
     """Redirige errores 404 al login, excepto para archivos estáticos."""
     if request.path.startswith(settings.STATIC_URL) or '/static/' in request.path:

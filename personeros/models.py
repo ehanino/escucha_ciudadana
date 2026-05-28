@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+import uuid
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
@@ -104,8 +105,9 @@ class CentroVotacion(models.Model):
 
 class Personero(models.Model):
     CARGO_CHOICES = [
-        ('titular', 'Titular'),
-        ('suplente', 'Suplente'),
+        ('Coordinador1', 'Coordinador Zonal'),
+        ('Coordinador2', 'Personero Centro de Votación'),
+        ('Coordinador3', 'Personero Mesa de Sufragio'),
     ]
     ESTADO_CHOICES = [
         ('pendiente', 'Pendiente'),
@@ -133,7 +135,7 @@ class Personero(models.Model):
         verbose_name='Centro de Votación'
     )
     numero_mesa       = models.CharField(max_length=10, blank=True, verbose_name='Nro. de Mesa')
-    cargo             = models.CharField(max_length=10, choices=CARGO_CHOICES, default='titular', verbose_name='Cargo')
+    cargo             = models.CharField(max_length=20, choices=CARGO_CHOICES, default='Coordinador1', verbose_name='Cargo')
 
     # ── Estado y gestión ─────────────────────────────────────────
     estado        = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='confirmado', verbose_name='Estado')
@@ -148,6 +150,15 @@ class Personero(models.Model):
         User, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='personero',
         verbose_name='Usuario del Sistema'
+    )
+    
+    # ── Código QR de Seguridad ────────────────────────────────────
+    token_uuid = models.UUIDField(
+        default=uuid.uuid4,
+        null=True,
+        blank=True,
+        unique=True,
+        verbose_name='Token de Verificación QR'
     )
 
     class Meta:
