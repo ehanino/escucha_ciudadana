@@ -590,9 +590,9 @@ def descargar_credencial_view(request, pk):
         
         qr = qrcode.QRCode(
             version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
             box_size=10,
-            border=1,
+            border=4,
         )
         qr.add_data(qr_url)
         qr.make(fit=True)
