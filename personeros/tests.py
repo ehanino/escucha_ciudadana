@@ -129,6 +129,15 @@ class PersoneroExportTestCase(TestCase):
         self.assertIn('12345678;HERRERA;AYAY;EDUARDO', csv_text)
         self.assertIn('87654321;PÉREZ;GÓMEZ;CARLOS', csv_text)
 
+        # CASO CRÍTICO: Exportar por ID con un filtro de búsqueda 'q' activo que no coincide con uno de ellos.
+        # Debe ignorar el filtro 'q' y exportar ambos seleccionados de todas formas.
+        response = self.client.get(reverse('personeros:exportar_excel'), {'ids': f'{self.personero.pk},{p2.pk}', 'q': 'Carlos'})
+        csv_text = response.content[3:].decode('utf-8')
+
+        # Ambos deben seguir presentes ignorando el filtro 'q'
+        self.assertIn('12345678;HERRERA;AYAY;EDUARDO', csv_text)
+        self.assertIn('87654321;PÉREZ;GÓMEZ;CARLOS', csv_text)
+
 
 from personeros.forms import PersoneroPublicRegistrationForm
 

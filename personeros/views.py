@@ -412,36 +412,40 @@ def exportar_excel_view(request):
 
     qs = get_personero_queryset(request.user)
 
-    # Filtros
-    q          = request.GET.get('q', '')
-    estado     = request.GET.get('estado', '')
-    dpto_id    = request.GET.get('departamento', '')
-    cargo      = request.GET.get('cargo', '')
-
-    if q:
-        qs = qs.filter(
-            Q(nombres__icontains=q) |
-            Q(apellido_paterno__icontains=q) |
-            Q(apellido_materno__icontains=q) |
-            Q(dni__icontains=q) |
-            Q(nro_celular__icontains=q)
-        )
-    if estado:
-        qs = qs.filter(estado=estado)
-    if dpto_id:
-        qs = qs.filter(distrito__provincia__departamento__id_ubigeo=dpto_id)
-    if cargo:
-        qs = qs.filter(cargo=cargo)
-
-    # Filtro opcional por IDs seleccionados vía Checkboxes
+    # Filtro opcional por IDs seleccionados vía Checkboxes.
+    # Si se especifican IDs, exportamos exactamente esos registros ignorando filtros de búsqueda.
     ids_str = request.GET.get('ids', '')
+    has_ids_filter = False
     if ids_str:
         try:
             ids_list = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
             if ids_list:
                 qs = qs.filter(id__in=ids_list)
+                has_ids_filter = True
         except ValueError:
             pass
+
+    if not has_ids_filter:
+        # Filtros normales de búsqueda
+        q          = request.GET.get('q', '')
+        estado     = request.GET.get('estado', '')
+        dpto_id    = request.GET.get('departamento', '')
+        cargo      = request.GET.get('cargo', '')
+
+        if q:
+            qs = qs.filter(
+                Q(nombres__icontains=q) |
+                Q(apellido_paterno__icontains=q) |
+                Q(apellido_materno__icontains=q) |
+                Q(dni__icontains=q) |
+                Q(nro_celular__icontains=q)
+            )
+        if estado:
+            qs = qs.filter(estado=estado)
+        if dpto_id:
+            qs = qs.filter(distrito__provincia__departamento__id_ubigeo=dpto_id)
+        if cargo:
+            qs = qs.filter(cargo=cargo)
 
     # Ordenar por apellido paterno
     qs = qs.order_by('apellido_paterno')
