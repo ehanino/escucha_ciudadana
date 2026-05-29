@@ -433,6 +433,16 @@ def exportar_excel_view(request):
     if cargo:
         qs = qs.filter(cargo=cargo)
 
+    # Filtro opcional por IDs seleccionados vía Checkboxes
+    ids_str = request.GET.get('ids', '')
+    if ids_str:
+        try:
+            ids_list = [int(x) for x in ids_str.split(',') if x.strip().isdigit()]
+            if ids_list:
+                qs = qs.filter(id__in=ids_list)
+        except ValueError:
+            pass
+
     # Ordenar por apellido paterno
     qs = qs.order_by('apellido_paterno')
 

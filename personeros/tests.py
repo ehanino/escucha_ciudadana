@@ -98,6 +98,37 @@ class PersoneroExportTestCase(TestCase):
         # El de DNI 12345678 (confirmado) NO debe estar presente
         self.assertNotIn('12345678;HERRERA;AYAY;EDUARDO', csv_text)
 
+    def test_export_selective_ids_success(self):
+        """Verifica que la exportación exporte únicamente los IDs seleccionados cuando se pasa el parámetro GET 'ids'."""
+        # Agregar otro personero de prueba
+        p2 = Personero.objects.create(
+            dni='87654321',
+            nombres='Carlos',
+            apellido_paterno='Pérez',
+            apellido_materno='Gómez',
+            nro_celular='999999999',
+            estado='confirmado'
+        )
+
+        self.client.login(username='admin_test', password='password123')
+
+        # Exportar únicamente el personero con DNI '12345678' (id de self.personero)
+        response = self.client.get(reverse('personeros:exportar_excel'), {'ids': f'{self.personero.pk}'})
+        csv_text = response.content[3:].decode('utf-8')
+
+        # El primer personero debe estar presente
+        self.assertIn('12345678;HERRERA;AYAY;EDUARDO', csv_text)
+        # El segundo personero (a pesar de estar confirmado) NO debe estar presente
+        self.assertNotIn('87654321;PÉREZ;GÓMEZ;CARLOS', csv_text)
+
+        # Exportar ambos personeros seleccionándolos por ID
+        response = self.client.get(reverse('personeros:exportar_excel'), {'ids': f'{self.personero.pk},{p2.pk}'})
+        csv_text = response.content[3:].decode('utf-8')
+
+        # Ambos deben estar presentes
+        self.assertIn('12345678;HERRERA;AYAY;EDUARDO', csv_text)
+        self.assertIn('87654321;PÉREZ;GÓMEZ;CARLOS', csv_text)
+
 
 from personeros.forms import PersoneroPublicRegistrationForm
 
