@@ -56,10 +56,22 @@
         <option value="pendiente"  {% if estado_sel == 'pendiente'  %}selected{% endif %}>⏳ Pendiente</option>
         <option value="retirado"   {% if estado_sel == 'retirado'   %}selected{% endif %}>❌ Retirado</option>
       </select>
-      <select name="departamento" class="select-filter">
+      <select name="departamento" id="id_departamento" class="select-filter">
         <option value="">Todos los dptos.</option>
         {% for dpto in departamentos %}
           <option value="{{ dpto.id_ubigeo }}" {% if dpto_sel == dpto.id_ubigeo %}selected{% endif %}>{{ dpto.nombre }}</option>
+        {% endfor %}
+      </select>
+      <select name="provincia" id="id_provincia" class="select-filter">
+        <option value="">Todas las provs.</option>
+        {% for prov in provincias %}
+          <option value="{{ prov.id_ubigeo }}" {% if prov_sel == prov.id_ubigeo %}selected{% endif %}>{{ prov.nombre }}</option>
+        {% endfor %}
+      </select>
+      <select name="distrito" id="id_distrito" class="select-filter">
+        <option value="">Todos los dists.</option>
+        {% for dist in distritos %}
+          <option value="{{ dist.id_ubigeo }}" {% if dist_sel == dist.id_ubigeo %}selected{% endif %}>{{ dist.nombre }}</option>
         {% endfor %}
       </select>
       <select name="cargo" class="select-filter">
@@ -69,7 +81,7 @@
         {% endfor %}
       </select>
       <button type="submit" class="btn btn-green" style="padding:8px 16px">Filtrar</button>
-      {% if q or estado_sel or dpto_sel or cargo_sel %}
+      {% if q or estado_sel or dpto_sel or prov_sel or dist_sel or cargo_sel %}
         <a href="{% url 'personeros:lista' %}" class="btn btn-ghost" style="padding:8px 14px">Limpiar</a>
       {% endif %}
     </form>
@@ -253,6 +265,58 @@
     
     // 7. Sincronizar UI al cargar la página por primera vez (re-hidratación)
     syncUI();
+
+    // 8. Selectores en cascada para Ubicación (Departamento -> Provincia -> Distrito)
+    const deptoSelect = document.getElementById('id_departamento');
+    const provSelect = document.getElementById('id_provincia');
+    const distSelect = document.getElementById('id_distrito');
+
+    if (deptoSelect && provSelect && distSelect) {
+      deptoSelect.addEventListener('change', async function() {
+        const deptoId = this.value;
+        
+        // Resetear selectores hijos
+        provSelect.innerHTML = '<option value="">Todas las provs.</option>';
+        distSelect.innerHTML = '<option value="">Todos los dists.</option>';
+        
+        if (!deptoId) return;
+
+        try {
+          const response = await fetch(`/personeros/api/provincias/?departamento=${deptoId}`);
+          const data = await response.json();
+          data.provincias.forEach(prov => {
+            const opt = document.createElement('option');
+            opt.value = prov.id_ubigeo;
+            opt.textContent = prov.nombre;
+            provSelect.appendChild(opt);
+          });
+        } catch (err) {
+          console.error('Error fetching provincias:', err);
+        }
+      });
+
+      provSelect.addEventListener('change', async function() {
+        const provId = this.value;
+        
+        // Resetear selector hijo
+        distSelect.innerHTML = '<option value="">Todos los dists.</option>';
+        
+        if (!provId) return;
+
+        try {
+          const response = await fetch(`/personeros/api/distritos/?provincia=${provId}`);
+          const data = await response.json();
+          data.distritos.forEach(dist => {
+            const opt = document.createElement('option');
+            opt.value = dist.id_ubigeo;
+            opt.textContent = dist.nombre;
+            distSelect.appendChild(opt);
+          });
+        } catch (err) {
+          console.error('Error fetching distritos:', err);
+        }
+      });
+    }
   });
 </script>
 {% endblock %}

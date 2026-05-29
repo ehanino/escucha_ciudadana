@@ -223,6 +223,8 @@ def lista_view(request):
     q          = request.GET.get('q', '')
     estado     = request.GET.get('estado', '')
     dpto_id    = request.GET.get('departamento', '')
+    prov_id    = request.GET.get('provincia', '')
+    dist_id    = request.GET.get('distrito', '')
     cargo      = request.GET.get('cargo', '')
 
     if q:
@@ -237,8 +239,20 @@ def lista_view(request):
         qs = qs.filter(estado=estado)
     if dpto_id:
         qs = qs.filter(distrito__provincia__departamento__id_ubigeo=dpto_id)
+    if prov_id:
+        qs = qs.filter(distrito__provincia__id_ubigeo=prov_id)
+    if dist_id:
+        qs = qs.filter(distrito__id_ubigeo=dist_id)
     if cargo:
         qs = qs.filter(cargo=cargo)
+
+    # Pre-cargar provincias y distritos seleccionados para la rehidratación en el servidor
+    provincias = []
+    distritos = []
+    if dpto_id:
+        provincias = Provincia.objects.filter(departamento_id=dpto_id)
+    if prov_id:
+        distritos = Distrito.objects.filter(provincia_id=prov_id)
 
     # Ordenar priorizando 'Coordinador2' (Personero Centro de Votación) al inicio,
     # y luego de forma descendente por fecha de registro (fecha_creacion).
@@ -254,10 +268,14 @@ def lista_view(request):
         'perfil':       perfil,
         'personeros':   personeros_ordered,
         'departamentos': Departamento.objects.all(),
+        'provincias':   provincias,
+        'distritos':    distritos,
         'cargo_choices': Personero.CARGO_CHOICES,
         'q':            q,
         'estado_sel':   estado,
         'dpto_sel':     dpto_id,
+        'prov_sel':     prov_id,
+        'dist_sel':     dist_id,
         'cargo_sel':    cargo,
         'total':        qs.count(),
     }
@@ -440,6 +458,8 @@ def exportar_excel_view(request):
         q          = request.GET.get('q', '')
         estado     = request.GET.get('estado', '')
         dpto_id    = request.GET.get('departamento', '')
+        prov_id    = request.GET.get('provincia', '')
+        dist_id    = request.GET.get('distrito', '')
         cargo      = request.GET.get('cargo', '')
 
         if q:
@@ -454,6 +474,10 @@ def exportar_excel_view(request):
             qs = qs.filter(estado=estado)
         if dpto_id:
             qs = qs.filter(distrito__provincia__departamento__id_ubigeo=dpto_id)
+        if prov_id:
+            qs = qs.filter(distrito__provincia__id_ubigeo=prov_id)
+        if dist_id:
+            qs = qs.filter(distrito__id_ubigeo=dist_id)
         if cargo:
             qs = qs.filter(cargo=cargo)
 
