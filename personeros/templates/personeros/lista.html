@@ -26,12 +26,17 @@
     <p class="page-subtitle">{{ total }} resultado{{ total|pluralize }} encontrado{{ total|pluralize }}</p>
   </div>
   {% if personeros or q or estado_sel or dpto_sel or cargo_sel %}
-  <a id="export-excel-btn" href="{% url 'personeros:exportar_excel' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-green" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 20px; font-weight: 600; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s;">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width: 18px; height: 18px;">
-      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-    </svg>
-    Exportar Excel
-  </a>
+  <div style="display: inline-flex; align-items: center; gap: 12px;">
+    <button id="clear-selection-btn" class="btn" style="display: none; align-items: center; gap: 6px; padding: 10px 16px; font-weight: 600; border-radius: 8px; border: 1px solid rgba(220, 38, 38, 0.2); color: #dc2626; background: rgba(220, 38, 38, 0.04); cursor: pointer; transition: all 0.2s;">
+      Limpiar Selección (<span id="selection-count">0</span>)
+    </button>
+    <a id="export-excel-btn" href="{% url 'personeros:exportar_excel' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}" class="btn btn-green" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 20px; font-weight: 600; border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width: 18px; height: 18px;">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+      Exportar Excel
+    </a>
+  </div>
   {% endif %}
 </div>
 
@@ -151,46 +156,103 @@
     const selectAllCheckbox = document.getElementById('select-all');
     const rowCheckboxes = document.querySelectorAll('.row-select');
     const exportBtn = document.getElementById('export-excel-btn');
+    const clearSelectionBtn = document.getElementById('clear-selection-btn');
+    const selectionCountSpan = document.getElementById('selection-count');
     
     if (!exportBtn) return;
     
-    // Guardar la URL base original del botón de exportar (con sus filtros GET actuales)
     const baseExportUrl = exportBtn.getAttribute('href');
+    const STORAGE_KEY = 'selected_personero_ids';
     
-    function updateExportUrl() {
-      const selectedIds = [];
+    // 1. Obtener selección actual desde sessionStorage
+    function getStoredIds() {
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    }
+    
+    // 2. Guardar selección en sessionStorage
+    function saveStoredIds(ids) {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+    }
+    
+    // 3. Actualizar interfaz visual, URL de botón y contador
+    function syncUI() {
+      const selectedIds = getStoredIds();
+      
+      // Marcar checkboxes visibles que estén en el storage
       rowCheckboxes.forEach(cb => {
-        if (cb.checked) {
-          selectedIds.push(cb.value);
-        }
+        cb.checked = selectedIds.includes(cb.value);
       });
       
+      // Sincronizar checkbox maestro
+      if (selectAllCheckbox && rowCheckboxes.length > 0) {
+        selectAllCheckbox.checked = Array.from(rowCheckboxes).every(cb => cb.checked);
+      }
+      
+      // Actualizar URL de Exportar
       let newUrl = baseExportUrl;
       if (selectedIds.length > 0) {
         const separator = baseExportUrl.includes('?') ? '&' : '?';
         newUrl = baseExportUrl + separator + 'ids=' + selectedIds.join(',');
       }
       exportBtn.setAttribute('href', newUrl);
+      
+      // Actualizar botón de Limpiar Selección
+      if (clearSelectionBtn && selectionCountSpan) {
+        if (selectedIds.length > 0) {
+          selectionCountSpan.textContent = selectedIds.length;
+          clearSelectionBtn.style.display = 'inline-flex';
+        } else {
+          clearSelectionBtn.style.display = 'none';
+        }
+      }
     }
     
-    if (selectAllCheckbox) {
-      selectAllCheckbox.addEventListener('change', function() {
-        rowCheckboxes.forEach(cb => {
-          cb.checked = selectAllCheckbox.checked;
-        });
-        updateExportUrl();
-      });
-    }
-    
+    // 4. Registrar eventos en checkboxes individuales
     rowCheckboxes.forEach(cb => {
       cb.addEventListener('change', function() {
-        if (selectAllCheckbox) {
-          const allChecked = Array.from(rowCheckboxes).every(c => c.checked);
-          selectAllCheckbox.checked = allChecked;
+        let selectedIds = getStoredIds();
+        if (cb.checked) {
+          if (!selectedIds.includes(cb.value)) {
+            selectedIds.push(cb.value);
+          }
+        } else {
+          selectedIds = selectedIds.filter(id => id !== cb.value);
         }
-        updateExportUrl();
+        saveStoredIds(selectedIds);
+        syncUI();
       });
     });
+    
+    // 5. Registrar evento en checkbox maestro
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('change', function() {
+        let selectedIds = getStoredIds();
+        rowCheckboxes.forEach(cb => {
+          cb.checked = selectAllCheckbox.checked;
+          if (cb.checked) {
+            if (!selectedIds.includes(cb.value)) {
+              selectedIds.push(cb.value);
+            }
+          } else {
+            selectedIds = selectedIds.filter(id => id !== cb.value);
+          }
+        });
+        saveStoredIds(selectedIds);
+        syncUI();
+      });
+    }
+    
+    // 6. Registrar evento en botón Limpiar Selección
+    if (clearSelectionBtn) {
+      clearSelectionBtn.addEventListener('click', function() {
+        sessionStorage.removeItem(STORAGE_KEY);
+        syncUI();
+      });
+    }
+    
+    // 7. Sincronizar UI al cargar la página por primera vez (re-hidratación)
+    syncUI();
   });
 </script>
 {% endblock %}
