@@ -138,6 +138,57 @@ class PersoneroExportTestCase(TestCase):
         self.assertIn('12345678;HERRERA;AYAY;EDUARDO', csv_text)
         self.assertIn('87654321;PÉREZ;GÓMEZ;CARLOS', csv_text)
 
+    def test_export_ordering_priority(self):
+        """Verifica que al exportar, los personeros de Centro de Votación (Coordinador2)
+        aparecen al inicio, y los registros se ordenan de forma descendente por fecha de creación.
+        """
+        from datetime import timedelta
+        from django.utils import timezone
+        now = timezone.now()
+
+        # Limpiar personeros creados en setUp para tener control total
+        Personero.objects.all().delete()
+
+        # Crear personeros de prueba
+        p_a = Personero.objects.create(
+            dni='11111111', nombres='A', apellido_paterno='A', apellido_materno='A',
+            cargo='Coordinador3', estado='confirmado'
+        )
+        p_b = Personero.objects.create(
+            dni='22222222', nombres='B', apellido_paterno='B', apellido_materno='B',
+            cargo='Coordinador2', estado='confirmado'
+        )
+        p_c = Personero.objects.create(
+            dni='33333333', nombres='C', apellido_paterno='C', apellido_materno='C',
+            cargo='Coordinador2', estado='confirmado'
+        )
+        p_d = Personero.objects.create(
+            dni='44444444', nombres='D', apellido_paterno='D', apellido_materno='D',
+            cargo='Coordinador1', estado='confirmado'
+        )
+
+        # Actualizar fecha_creacion usando update() para burlar auto_now_add
+        Personero.objects.filter(pk=p_a.pk).update(fecha_creacion=now - timedelta(days=2))
+        Personero.objects.filter(pk=p_b.pk).update(fecha_creacion=now - timedelta(days=1))
+        Personero.objects.filter(pk=p_c.pk).update(fecha_creacion=now)
+        Personero.objects.filter(pk=p_d.pk).update(fecha_creacion=now - timedelta(days=3))
+
+        self.client.login(username='admin_test', password='password123')
+        response = self.client.get(reverse('personeros:exportar_excel'))
+        csv_text = response.content[3:].decode('utf-8')
+
+        # Partir las líneas del CSV (obviar cabecera y línea vacía final)
+        lines = [line for line in csv_text.split('\r\n') if line.strip()][1:]
+
+        # La primera fila debe ser Personero C (Coordinador2, Creado Hoy)
+        self.assertTrue(lines[0].startswith('33333333;C;C;C'), f"Expected C first, got: {lines[0]}")
+        # La segunda fila debe ser Personero B (Coordinador2, Creado Ayer)
+        self.assertTrue(lines[1].startswith('22222222;B;B;B'), f"Expected B second, got: {lines[1]}")
+        # La tercera fila debe ser Personero A (Coordinador3, Creado hace 2 días)
+        self.assertTrue(lines[2].startswith('11111111;A;A;A'), f"Expected A third, got: {lines[2]}")
+        # La cuarta fila debe ser Personero D (Coordinador1, Creado hace 3 días)
+        self.assertTrue(lines[3].startswith('44444444;D;D;D'), f"Expected D fourth, got: {lines[3]}")
+
 
 from personeros.forms import PersoneroPublicRegistrationForm
 

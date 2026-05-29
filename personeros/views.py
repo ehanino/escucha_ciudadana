@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Case, When, Value, IntegerField
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.conf import settings
@@ -240,9 +240,19 @@ def lista_view(request):
     if cargo:
         qs = qs.filter(cargo=cargo)
 
+    # Ordenar priorizando 'Coordinador2' (Personero Centro de Votación) al inicio,
+    # y luego de forma descendente por fecha de registro (fecha_creacion).
+    personeros_ordered = qs.annotate(
+        prioridad_cargo=Case(
+            When(cargo='Coordinador2', then=Value(1)),
+            default=Value(2),
+            output_field=IntegerField(),
+        )
+    ).order_by('prioridad_cargo', '-fecha_creacion')
+
     context = {
         'perfil':       perfil,
-        'personeros':   qs.order_by('apellido_paterno'),
+        'personeros':   personeros_ordered,
         'departamentos': Departamento.objects.all(),
         'cargo_choices': Personero.CARGO_CHOICES,
         'q':            q,
@@ -447,8 +457,15 @@ def exportar_excel_view(request):
         if cargo:
             qs = qs.filter(cargo=cargo)
 
-    # Ordenar por apellido paterno
-    qs = qs.order_by('apellido_paterno')
+    # Ordenar priorizando 'Coordinador2' (Personero Centro de Votación) al inicio,
+    # y luego de forma descendente por fecha de registro (fecha_creacion).
+    qs = qs.annotate(
+        prioridad_cargo=Case(
+            When(cargo='Coordinador2', then=Value(1)),
+            default=Value(2),
+            output_field=IntegerField(),
+        )
+    ).order_by('prioridad_cargo', '-fecha_creacion')
 
     # Generar la respuesta HTTP del CSV/Excel
     import csv
