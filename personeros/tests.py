@@ -280,3 +280,158 @@ class ActaElectoralTestCase(TestCase):
         acta = self.personero.actas.get(numero_mesa='123456')
         self.assertEqual(acta.votos_jp, 100)
 
+
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+
+class PersoneroCentroVotacionUniqueTestCase(TestCase):
+    def setUp(self):
+        # Setup UBIGEO
+        self.dpto = Departamento.objects.create(id_ubigeo='15', nombre='LIMA')
+        self.prov = Provincia.objects.create(id_ubigeo='1501', nombre='LIMA', departamento=self.dpto)
+        self.dist = Distrito.objects.create(id_ubigeo='150101', nombre='LIMA', provincia=self.prov)
+
+        # Setup local de votación
+        self.local = CentroVotacion.objects.create(
+            distrito=self.dist,
+            nombre='COLEGIO NACIONAL GUADALUPE',
+            direccion='AV. ALFONSO UGARTE 1227'
+        )
+
+    def test_create_first_personero_cv_success(self):
+        """Verifica que se puede registrar exitosamente el primer Personero Centro de Votación."""
+        p1 = Personero(
+            dni='11111111',
+            nombres='MARCO',
+            apellido_paterno='DIAZ',
+            apellido_materno='SILVA',
+            nro_celular='999999991',
+            distrito=self.dist,
+            centro_votacion=self.local,
+            cargo='Coordinador2',
+            estado='confirmado'
+        )
+        p1.full_clean()
+        p1.save()
+        self.assertEqual(Personero.objects.count(), 1)
+
+    def test_create_second_personero_cv_raises_validation_error(self):
+        """Verifica que el método clean() lance un ValidationError al intentar registrar un duplicado activo."""
+        p1 = Personero.objects.create(
+            dni='11111111',
+            nombres='MARCO',
+            apellido_paterno='DIAZ',
+            apellido_materno='SILVA',
+            nro_celular='999999991',
+            distrito=self.dist,
+            centro_votacion=self.local,
+            cargo='Coordinador2',
+            estado='confirmado'
+        )
+
+        p2 = Personero(
+            dni='22222222',
+            nombres='LUCIA',
+            apellido_paterno='ALVA',
+            apellido_materno='CASTRO',
+            nro_celular='999999992',
+            distrito=self.dist,
+            centro_votacion=self.local,
+            cargo='Coordinador2',
+            estado='pendiente'
+        )
+
+        with self.assertRaises(ValidationError) as ctx:
+            p2.full_clean()
+        
+        self.assertIn('cargo', ctx.exception.error_dict)
+        self.assertIn('Ya existe un "Personero Centro de Votación" activo', ctx.exception.error_dict['cargo'][0].message)
+
+    def test_create_second_personero_cv_db_integrity_error(self):
+        """Verifica que guardar un duplicado directamente sin full_clean() lance un IntegrityError en la DB."""
+        Personero.objects.create(
+            dni='11111111',
+            nombres='MARCO',
+            apellido_paterno='DIAZ',
+            apellido_materno='SILVA',
+            nro_celular='999999991',
+            distrito=self.dist,
+            centro_votacion=self.local,
+            cargo='Coordinador2',
+            estado='confirmado'
+        )
+
+        p2 = Personero(
+            dni='22222222',
+            nombres='LUCIA',
+            apellido_paterno='ALVA',
+            apellido_materno='CASTRO',
+            nro_celular='999999992',
+            distrito=self.dist,
+            centro_votacion=self.local,
+            cargo='Coordinador2',
+            estado='pendiente'
+        )
+
+        with self.assertRaises(IntegrityError):
+            p2.save()
+
+    def test_create_second_personero_cv_succeeds_if_first_retired(self):
+        """Verifica que se pueda registrar un segundo personero si el primero está retirado (inactivo)."""
+        p1 = Personero.objects.create(
+            dni='11111111',
+            nombres='MARCO',
+            apellido_paterno='DIAZ',
+            apellido_materno='SILVA',
+            nro_celular='999999991',
+            distrito=self.dist,
+            centro_votacion=self.local,
+            cargo='Coordinador2',
+            estado='retirado'
+        )
+
+        p2 = Personero(
+            dni='22222222',
+            nombres='LUCIA',
+            apellido_paterno='ALVA',
+            apellido_materno='CASTRO',
+            nro_celular='999999992',
+            distrito=self.dist,
+            centro_votacion=self.local,
+            cargo='Coordinador2',
+            estado='confirmado'
+        )
+        # No debe lanzar ningún error de validación
+        p2.full_clean()
+        p2.save()
+        self.assertEqual(Personero.objects.filter(estado='confirmado').count(), 1)
+
+    def test_multiple_mesa_personeros_success(self):
+        """Verifica que se puedan registrar múltiples Personeros de Mesa (cargo Coordinador3) en el mismo local."""
+        p1 = Personero.objects.create(
+            dni='11111111',
+            nombres='MARCO',
+            apellido_paterno='DIAZ',
+            apellido_materno='SILVA',
+            nro_celular='999999991',
+            distrito=self.dist,
+            centro_votacion=self.local,
+            cargo='Coordinador3',
+            estado='confirmado'
+        )
+
+        p2 = Personero(
+            dni='22222222',
+            nombres='LUCIA',
+            apellido_paterno='ALVA',
+            apellido_materno='CASTRO',
+            nro_celular='999999992',
+            distrito=self.dist,
+            centro_votacion=self.local,
+            cargo='Coordinador3',
+            estado='confirmado'
+        )
+        p2.full_clean()
+        p2.save()
+        self.assertEqual(Personero.objects.filter(cargo='Coordinador3').count(), 2)
+

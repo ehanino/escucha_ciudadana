@@ -4,6 +4,7 @@ import uuid
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 ROLES = [
     ('superadmin', 'Super Administrador'),
@@ -165,9 +166,33 @@ class Personero(models.Model):
         verbose_name        = 'Personero'
         verbose_name_plural = 'Personeros'
         ordering            = ['apellido_paterno', 'apellido_materno']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['centro_votacion', 'cargo'],
+                condition=models.Q(cargo='Coordinador2', estado__in=['pendiente', 'confirmado']),
+                name='unique_active_personero_centro_votacion'
+            )
+        ]
 
     def __str__(self):
         return f"{self.apellido_paterno} {self.apellido_materno}, {self.nombres} — DNI: {self.dni}"
+
+    def clean(self):
+        super().clean()
+        if self.cargo == 'Coordinador2' and self.centro_votacion:
+            # Buscar duplicados activos (excluyendo estado retirado)
+            duplicados = Personero.objects.filter(
+                centro_votacion=self.centro_votacion,
+                cargo='Coordinador2',
+                estado__in=['pendiente', 'confirmado']
+            )
+            if self.pk:
+                duplicados = duplicados.exclude(pk=self.pk)
+            if duplicados.exists():
+                duplicado = duplicados.first()
+                raise ValidationError({
+                    'cargo': f'Ya existe un "Personero Centro de Votación" activo asignado a este local: {duplicado.nombre_completo} (DNI: {duplicado.dni}). Solo se permite uno por local.'
+                })
 
     @property
     def nombre_completo(self):
