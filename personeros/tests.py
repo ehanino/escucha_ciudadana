@@ -526,3 +526,93 @@ class PersoneroCentroVotacionUniqueTestCase(TestCase):
         p2.save()
         self.assertEqual(Personero.objects.filter(cargo='Coordinador3').count(), 2)
 
+
+class PersoneroConsultaLocalTestCase(TestCase):
+    def setUp(self):
+        # Crear superadmin
+        self.admin_user = User.objects.create_user(username='admin_test', password='password123')
+        self.admin_profile = PerfilUsuario.objects.create(usuario=self.admin_user, rol='superadmin')
+
+        # Crear un personero común
+        self.personero_user = User.objects.create_user(username='personero_test', password='password123')
+        self.personero_profile = PerfilUsuario.objects.create(usuario=self.personero_user, rol='personero')
+
+        # Crear Ubicaciones de Callao
+        from personeros.models import Departamento, Provincia, Distrito, CentroVotacion
+        self.dpto = Departamento.objects.create(id_ubigeo='07', nombre='CALLAO')
+        self.prov = Provincia.objects.create(id_ubigeo='0701', nombre='CALLAO', departamento=self.dpto)
+        self.dist = Distrito.objects.create(id_ubigeo='070101', nombre='CALLAO', provincia=self.prov)
+
+        # Crear Local
+        self.local = CentroVotacion.objects.create(
+            distrito=self.dist,
+            nombre='IE JAZMINES DE OQUENDO',
+            direccion='AV. OQUENDO 123',
+            actas=10,
+            electores=3000
+        )
+
+        # Crear Personero Zonal (Coordinador1)
+        self.cz = Personero.objects.create(
+            dni='11111111', nombres='MARCO', apellido_paterno='DIAZ', apellido_materno='SILVA',
+            distrito=self.dist, centro_votacion=self.local, cargo='Coordinador1', estado='confirmado'
+        )
+
+        # Crear Personero de Centro (Coordinador2)
+        self.pcv = Personero.objects.create(
+            dni='22222222', nombres='LUCIA', apellido_paterno='ALVA', apellido_materno='CASTRO',
+            distrito=self.dist, centro_votacion=self.local, cargo='Coordinador2', estado='confirmado'
+        )
+
+        # Crear Personero de Mesa (Coordinador3)
+        self.pm = Personero.objects.create(
+            dni='33333333', nombres='JUAN', apellido_paterno='PEREZ', apellido_materno='GOMEZ',
+            distrito=self.dist, centro_votacion=self.local, cargo='Coordinador3', estado='confirmado',
+            numero_mesa='081455'
+        )
+
+        self.client = Client()
+
+    def test_consulta_local_view_access(self):
+        """Verifica que un administrador pueda acceder al panel de consulta local y un personero común sea redirigido."""
+        # Intento anónimo redirecciona
+        response = self.client.get(reverse('personeros:consulta_local'))
+        self.assertEqual(response.status_code, 302)
+
+        # Admin accede con éxito
+        self.client.login(username='admin_test', password='password123')
+        response = self.client.get(reverse('personeros:consulta_local'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'personeros/consulta_local.html')
+
+        # Personero redirecciona
+        self.client.logout()
+        self.client.login(username='personero_test', password='password123')
+        response = self.client.get(reverse('personeros:consulta_local'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_api_local_detalle_success(self):
+        """Verifica que la API retorne correctamente la estructura completa del local en formato JSON."""
+        self.client.login(username='admin_test', password='password123')
+        response = self.client.get(reverse('personeros:api_local_detalle', kwargs={'local_id': self.local.pk}))
+        self.assertEqual(response.status_code, 200)
+
+        data = response.json()
+        self.assertEqual(data['local']['nombre'], 'IE JAZMINES DE OQUENDO')
+        self.assertEqual(data['local']['distrito'], 'CALLAO')
+        self.assertEqual(data['local']['electores'], 3000)
+
+        # Coordinador Zonal
+        self.assertEqual(len(data['coordinadores_zonales']), 1)
+        self.assertEqual(data['coordinadores_zonales'][0]['nombre_completo'], 'MARCO DIAZ SILVA')
+
+        # Personero Centro
+        self.assertIsNotNone(data['personero_centro_votacion'])
+        self.assertEqual(data['personero_centro_votacion']['nombre_completo'], 'LUCIA ALVA CASTRO')
+
+        # Personero Mesa
+        self.assertEqual(len(data['personeros_mesa']), 1)
+        self.assertEqual(data['personeros_mesa'][0]['mesa'], '081455')
+        self.assertEqual(data['personeros_mesa'][0]['nombre_completo'], 'JUAN PEREZ GOMEZ')
+
+

@@ -851,6 +851,96 @@ def validar_credencial_publica_view(request, token_uuid):
     return render(request, 'personeros/validar_credencial.html', context)
 
 
+@login_required(login_url='personeros:login')
+def consulta_local_view(request):
+    perfil = get_perfil(request.user)
+    if perfil and perfil.es_personero:
+        return redirect(_get_personero_destination(request.user))
+    
+    # Cargar distritos del Callao para el dropdown inicial (ubigeo de Callao empieza con '0701')
+    distritos_callao = Distrito.objects.filter(provincia_id='0701').order_by('nombre')
+    
+    # Cargar todos los locales del Callao para alimentar la lista predictiva de autocompletado
+    locales_callao = CentroVotacion.objects.filter(distrito__provincia_id='0701').order_by('nombre')
+    
+    context = {
+        'perfil': perfil,
+        'distritos': distritos_callao,
+        'locales': locales_callao,
+    }
+    return render(request, 'personeros/consulta_local.html', context)
+
+
+@login_required(login_url='personeros:login')
+def api_local_detalle_view(request, local_id):
+    perfil = get_perfil(request.user)
+    if perfil and perfil.es_personero:
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+        
+    local = get_object_or_404(CentroVotacion, pk=local_id)
+    
+    # Obtener personeros activos (confirmado o pendiente) asignados a este local
+    personeros = local.personeros.filter(estado__in=['pendiente', 'confirmado'])
+    
+    # Clasificar por cargo
+    coordinadores_zonales = personeros.filter(cargo='Coordinador1').order_by('apellido_paterno')
+    personero_cv = personeros.filter(cargo='Coordinador2').first()
+    personeros_mesa = personeros.filter(cargo='Coordinador3').order_by('numero_mesa')
+    
+    # Serializar la data
+    data_coordinadores = [
+        {
+            'id': p.pk,
+            'nombre_completo': p.nombre_completo,
+            'dni': p.dni,
+            'celular': p.nro_celular or '—',
+            'estado': p.get_estado_display(),
+            'perfil_completado': p.perfil_completado
+        }
+        for p in coordinadores_zonales
+    ]
+    
+    data_personero_cv = None
+    if personero_cv:
+        data_personero_cv = {
+            'id': personero_cv.pk,
+            'nombre_completo': personero_cv.nombre_completo,
+            'dni': personero_cv.dni,
+            'celular': personero_cv.nro_celular or '—',
+            'estado': personero_cv.get_estado_display(),
+            'perfil_completado': personero_cv.perfil_completado
+        }
+        
+    data_mesas = [
+        {
+            'id': p.pk,
+            'mesa': p.numero_mesa,
+            'nombre_completo': p.nombre_completo,
+            'dni': p.dni,
+            'celular': p.nro_celular or '—',
+            'estado': p.get_estado_display(),
+            'perfil_completado': p.perfil_completado
+        }
+        for p in personeros_mesa
+    ]
+    
+    response_data = {
+        'local': {
+            'id': local.pk,
+            'nombre': local.nombre,
+            'direccion': local.direccion or 'Sin dirección registrada',
+            'distrito': local.distrito.nombre if local.distrito else 'Sin distrito',
+            'actas_esperadas': local.actas,
+            'electores': local.electores
+        },
+        'coordinadores_zonales': data_coordinadores,
+        'personero_centro_votacion': data_personero_cv,
+        'personeros_mesa': data_mesas
+    }
+    
+    return JsonResponse(response_data)
+
+
 def handler404_redirect(request, exception=None):
     """Redirige errores 404 al login, excepto para archivos estáticos."""
     if request.path.startswith(settings.STATIC_URL) or '/static/' in request.path:

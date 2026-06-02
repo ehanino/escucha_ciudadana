@@ -14,10 +14,12 @@ urlpatterns = [
     path('mi-perfil/', views.mi_perfil_view,   name='mi_perfil'),
     path('reportar-escrutinio/', views.reportar_escrutinio_view, name='reportar_escrutinio'),
     path('registro/',  views.registro_publico_view, name='registro_publico'),
+    path('consulta-local/', views.consulta_local_view, name='consulta_local'),
 
     # APIs internas
     path('api/resumen/',    views.api_resumen_view,   name='api_resumen'),
     path('api/provincias/', views.api_provincias_view, name='api_provincias'),
     path('api/distritos/',  views.api_distritos_view,  name='api_distritos'),
     path('api/centros/',    views.api_centros_view,    name='api_centros'),
+    path('api/local-detalle/<int:local_id>/', views.api_local_detalle_view, name='api_local_detalle'),
 ]
