@@ -563,21 +563,17 @@
       if (data.coordinadores_zonales.length > 0) {
         data.coordinadores_zonales.forEach(p => {
           const czCard = document.createElement('div');
-          czCard.className = 'person-badge';
+          czCard.className = 'mesa-card';
           czCard.style.marginBottom = '16px';
-
-          const initials = p.nombre_completo.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-
           czCard.innerHTML = `
-              <div class="person-avatar">${initials}</div>
-              <div class="person-info">
-                <div class="person-name">${p.nombre_completo}</div>
-                <div class="person-meta">
-                  <span class="meta-item"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 014 0"/></svg> DNI: ${p.dni}</span>
-                  <span class="meta-item"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg> ${p.celular}</span>
-                </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span class="badge ${p.estado === 'Confirmado' ? 'badge-confirmado' : 'badge-pendiente'}" style="font-size:8.5px; padding:2px 6px;">${p.estado}</span>
               </div>
-              <span class="badge ${p.estado === 'Confirmado' ? 'badge-confirmado' : 'badge-pendiente'}">${p.estado}</span>
+              <div class="mesa-person-name">${p.nombre_completo}</div>
+              <div style="font-size:11px; color:var(--text-secondary); display:flex; gap:10px;">
+                <span>DNI: ${p.dni}</span>
+                <span>Cel: ${p.celular}</span>
+              </div>
             `;
           czContainer.appendChild(czCard);
         });
@@ -596,18 +592,16 @@
       cvContainer.innerHTML = '';
       if (data.personero_centro_votacion) {
         const p = data.personero_centro_votacion;
-        const initials = p.nombre_completo.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
         cvContainer.innerHTML = `
-            <div class="person-badge">
-              <div class="person-avatar" style="background: linear-gradient(135deg, var(--jp-green), #85e090);">${initials}</div>
-              <div class="person-info">
-                <div class="person-name">${p.nombre_completo}</div>
-                <div class="person-meta">
-                  <span class="meta-item"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 014 0"/></svg> DNI: ${p.dni}</span>
-                  <span class="meta-item"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg> ${p.celular}</span>
-                </div>
+            <div class="mesa-card">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span class="badge ${p.estado === 'Confirmado' ? 'badge-confirmado' : 'badge-pendiente'}" style="font-size:8.5px; padding:2px 6px;">${p.estado}</span>
               </div>
-              <span class="badge ${p.estado === 'Confirmado' ? 'badge-confirmado' : 'badge-pendiente'}">${p.estado}</span>
+              <div class="mesa-person-name">${p.nombre_completo}</div>
+              <div style="font-size:11px; color:var(--text-secondary); display:flex; gap:10px;">
+                <span>DNI: ${p.dni}</span>
+                <span>Cel: ${p.celular}</span>
+              </div>
             </div>
           `;
       } else {
