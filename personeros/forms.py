@@ -235,7 +235,10 @@ class PersoneroPublicRegistrationForm(forms.ModelForm):
         dni = self.cleaned_data.get('dni')
         if not dni.isdigit() or len(dni) != 8:
             raise forms.ValidationError('El DNI debe tener exactamente 8 dígitos.')
-        if Personero.objects.filter(dni=dni).exists():
+        qs = Personero.objects.filter(dni=dni)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
             raise forms.ValidationError('Este DNI ya está registrado en el sistema.')
         return dni
 

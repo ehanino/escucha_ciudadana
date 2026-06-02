@@ -616,3 +616,91 @@ class PersoneroConsultaLocalTestCase(TestCase):
         self.assertEqual(data['personeros_mesa'][0]['nombre_completo'], 'JUAN PEREZ GOMEZ')
 
 
+class PersoneroDniSearchAndUpdateTestCase(TestCase):
+    def setUp(self):
+        # Crear administrador
+        self.admin_user = User.objects.create_user(username='admin_test_dni', password='password123')
+        self.admin_profile = PerfilUsuario.objects.create(usuario=self.admin_user, rol='superadmin')
+
+        # Setup UBIGEO
+        from personeros.models import Departamento, Provincia, Distrito, CentroVotacion
+        self.dpto = Departamento.objects.create(id_ubigeo='07', nombre='CALLAO')
+        self.prov = Provincia.objects.create(id_ubigeo='0701', nombre='CALLAO', departamento=self.dpto)
+        self.dist = Distrito.objects.create(id_ubigeo='070101', nombre='CALLAO', provincia=self.prov)
+
+        # Setup local
+        self.local = CentroVotacion.objects.create(
+            distrito=self.dist,
+            nombre='IE JAZMINES DE OQUENDO',
+            direccion='AV. OQUENDO 123',
+            actas=10,
+            electores=3000
+        )
+
+        # Crear un personero existente
+        self.personero = Personero.objects.create(
+            dni='77777777',
+            nombres='LUIS',
+            apellido_paterno='RODRIGUEZ',
+            apellido_materno='SANCHEZ',
+            nro_celular='988888888',
+            distrito=self.dist,
+            estado='pendiente'
+        )
+
+        self.client = Client()
+
+    def test_api_buscar_dni_success(self):
+        """Verifica que la API retorne correctamente los datos del personero si existe."""
+        self.client.login(username='admin_test_dni', password='password123')
+        response = self.client.get(reverse('personeros:api_buscar_dni'), {'dni': '77777777'})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['exists'])
+        self.assertEqual(data['nombres'], 'LUIS')
+        self.assertEqual(data['apellido_paterno'], 'RODRIGUEZ')
+        self.assertEqual(data['celular'], '988888888')
+        self.assertEqual(data['distrito'], '070101')
+
+    def test_api_buscar_dni_not_found(self):
+        """Verifica que la API retorne exists: False si el DNI no existe."""
+        self.client.login(username='admin_test_dni', password='password123')
+        response = self.client.get(reverse('personeros:api_buscar_dni'), {'dni': '11112222'})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(data['exists'])
+
+    def test_register_update_existing_personero(self):
+        """Verifica que registrar con un DNI existente actualice sus datos en lugar de duplicar o dar error."""
+        self.client.login(username='admin_test_dni', password='password123')
+        
+        # Enviar POST con el DNI existente para cambiar su celular, distrito y asignarle local/cargo
+        response = self.client.post(
+            reverse('personeros:registro_publico') + f"?cargo=Coordinador2&centro_votacion={self.local.pk}",
+            {
+                'dni': '77777777',
+                'nombres': 'LUIS',
+                'apellido_paterno': 'RODRIGUEZ',
+                'apellido_materno': 'SANCHEZ',
+                'nro_celular': '999999999',  # Nuevo celular
+                'departamento': '07',
+                'provincia': '0701',
+                'distrito': '070101',
+                'cargo': 'Coordinador2',
+                'centro_votacion': str(self.local.pk),
+            }
+        )
+        
+        # Debe redirigir de vuelta al panel de consulta local con el local preseleccionado
+        self.assertEqual(response.status_code, 302)
+        expected_url = f"{reverse('personeros:consulta_local')}?local_id={self.local.pk}"
+        self.assertIn(expected_url, response['Location'])
+
+        # Verificar que NO se haya creado un nuevo registro y que se haya actualizado el existente
+        self.assertEqual(Personero.objects.filter(dni='77777777').count(), 1)
+        updated_personero = Personero.objects.get(dni='77777777')
+        self.assertEqual(updated_personero.nro_celular, '999999999')
+        self.assertEqual(updated_personero.cargo, 'Coordinador2')
+        self.assertEqual(updated_personero.centro_votacion, self.local)
+
+

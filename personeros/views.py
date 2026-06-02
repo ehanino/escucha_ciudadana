@@ -14,28 +14,64 @@ from .forms import PersoneroSelfUpdateForm, PersoneroPublicRegistrationForm, Act
 # ── Auth & Registro Público ───────────────────────────────────────────────────
 
 def registro_publico_view(request):
-    """Vista pública para que los personeros se registren ellos mismos."""
+    """Vista pública para que los personeros se registren ellos mismos o admin los asigne."""
+    # Capturar parámetros de asignación desde GET o POST
+    cargo = request.GET.get('cargo', '') or request.POST.get('cargo', 'Coordinador1')
+    centro_votacion_id = request.GET.get('centro_votacion', '') or request.POST.get('centro_votacion', '')
+    numero_mesa = request.GET.get('numero_mesa', '') or request.POST.get('numero_mesa', '')
+    numero_mesa = numero_mesa.strip()
+
+    instance = None
     if request.method == 'POST':
-        form = PersoneroPublicRegistrationForm(request.POST)
+        dni = request.POST.get('dni', '').strip()
+        if dni and len(dni) == 8 and dni.isdigit():
+            try:
+                instance = Personero.objects.get(dni=dni)
+            except Personero.DoesNotExist:
+                instance = None
+
+        form = PersoneroPublicRegistrationForm(request.POST, instance=instance)
         if form.is_valid():
             personero = form.save(commit=False)
-            personero.estado = 'pendiente'  # Por defecto queda pendiente de asignación por admin
+            
+            # Si el DNI ya existía, conservamos su estado, pero si es nuevo, queda como pendiente por defecto.
+            if not instance:
+                personero.estado = 'pendiente'
+                
+            # Asignar local, cargo y mesa si vienen definidos
+            if cargo in ['Coordinador1', 'Coordinador2', 'Coordinador3']:
+                personero.cargo = cargo
+            if centro_votacion_id:
+                try:
+                    personero.centro_votacion = CentroVotacion.objects.get(pk=centro_votacion_id)
+                except CentroVotacion.DoesNotExist:
+                    pass
+            if numero_mesa:
+                personero.numero_mesa = numero_mesa
+                
             personero.save()
             
-            # Si el usuario que está registrando ya está autenticado (admin/coordinador),
-            # lo redirigimos de vuelta al listado de personeros con un mensaje de éxito.
+            # Si el usuario está autenticado, redirigir de forma inteligente
             if request.user.is_authenticated:
-                messages.success(request, f'¡Personero {personero.nombre_completo} registrado exitosamente!')
+                messages.success(request, f'¡Personero {personero.nombre_completo} guardado y asignado exitosamente!')
+                if centro_votacion_id:
+                    from django.urls import reverse
+                    return redirect(f"{reverse('personeros:consulta_local')}?local_id={centro_votacion_id}")
                 return redirect('personeros:lista')
                 
-            messages.success(request, '¡Gracias por registrarte! Un coordinador se pondrá en contacto contigo pronto para asignarte un local.')
+            messages.success(request, '¡Gracias por registrarte! Un coordinador se pondrá en contacto contigo pronto.')
             return render(request, 'personeros/registro_exitoso.html', {'personero': personero})
     else:
         form = PersoneroPublicRegistrationForm()
 
-    # Si es administrador, cargamos el formulario dentro del diseño del panel con menú lateral
+    context = {
+        'form': form,
+        'cargo': cargo,
+        'centro_votacion_id': centro_votacion_id,
+        'numero_mesa': numero_mesa,
+    }
     template_name = 'personeros/registro_admin.html' if request.user.is_authenticated else 'personeros/registro_publico.html'
-    return render(request, template_name, {'form': form})
+    return render(request, template_name, context)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -863,10 +899,13 @@ def consulta_local_view(request):
     # Cargar todos los locales del Callao para alimentar la lista predictiva de autocompletado
     locales_callao = CentroVotacion.objects.filter(distrito__provincia_id='0701').order_by('nombre')
     
+    preselected_local_id = request.GET.get('local_id', '')
+    
     context = {
         'perfil': perfil,
         'distritos': distritos_callao,
         'locales': locales_callao,
+        'preselected_local_id': preselected_local_id,
     }
     return render(request, 'personeros/consulta_local.html', context)
 
@@ -939,6 +978,34 @@ def api_local_detalle_view(request, local_id):
     }
     
     return JsonResponse(response_data)
+
+
+@login_required(login_url='personeros:login')
+def api_buscar_dni_view(request):
+    perfil = get_perfil(request.user)
+    if perfil and perfil.es_personero:
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+        
+    dni = request.GET.get('dni', '').strip()
+    if not dni or len(dni) != 8 or not dni.isdigit():
+        return JsonResponse({'exists': False, 'error': 'DNI inválido'}, status=400)
+        
+    try:
+        p = Personero.objects.get(dni=dni)
+        data = {
+            'exists': True,
+            'nombres': p.nombres,
+            'apellido_paterno': p.apellido_paterno,
+            'apellido_materno': p.apellido_materno,
+            'celular': p.nro_celular,
+            'fecha_nacimiento': p.fecha_nacimiento.strftime('%Y-%m-%d') if p.fecha_nacimiento else '',
+            'departamento': p.distrito.provincia.departamento.id_ubigeo if p.distrito and p.distrito.provincia and p.distrito.provincia.departamento else '',
+            'provincia': p.distrito.provincia.id_ubigeo if p.distrito and p.distrito.provincia else '',
+            'distrito': p.distrito.id_ubigeo if p.distrito else ''
+        }
+        return JsonResponse(data)
+    except Personero.DoesNotExist:
+        return JsonResponse({'exists': False})
 
 
 def handler404_redirect(request, exception=None):

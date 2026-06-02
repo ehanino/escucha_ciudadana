@@ -563,19 +563,21 @@
       if (data.coordinadores_zonales.length > 0) {
         data.coordinadores_zonales.forEach(p => {
           const czCard = document.createElement('div');
-          czCard.className = 'mesa-card';
+          czCard.className = 'person-badge';
           czCard.style.marginBottom = '16px';
 
+          const initials = p.nombre_completo.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
           czCard.innerHTML = `
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <span class="mesa-number">Coordinador Zonal</span>
-                <span class="badge ${p.estado === 'Confirmado' ? 'badge-confirmado' : 'badge-pendiente'}" style="font-size:8.5px; padding:2px 6px;">${p.estado}</span>
+              <div class="person-avatar">${initials}</div>
+              <div class="person-info">
+                <div class="person-name">${p.nombre_completo}</div>
+                <div class="person-meta">
+                  <span class="meta-item"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 014 0"/></svg> DNI: ${p.dni}</span>
+                  <span class="meta-item"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg> ${p.celular}</span>
+                </div>
               </div>
-              <div class="mesa-person-name">${p.nombre_completo}</div>
-              <div style="font-size:11px; color:var(--text-secondary); display:flex; gap:10px;">
-                <span>DNI: ${p.dni}</span>
-                <span>Cel: ${p.celular}</span>
-              </div>
+              <span class="badge ${p.estado === 'Confirmado' ? 'badge-confirmado' : 'badge-pendiente'}">${p.estado}</span>
             `;
           czContainer.appendChild(czCard);
         });
@@ -584,7 +586,7 @@
             <div class="no-assigned">
               <span style="font-size: 28px; display: block; margin-bottom: 6px;">⏳</span>
               <p style="font-size:13px; font-weight:600;">Sin Coordinador Zonal Asignado</p>
-              <a href="/personeros/registro/?cargo=Coordinador1" class="btn btn-green btn-assign" style="margin-top:10px">Asignar Coordinador</a>
+              <a href="/personeros/registro/?cargo=Coordinador1&centro_votacion=${data.local.id}&local_id=${data.local.id}" class="btn btn-green btn-assign" style="margin-top:10px">Asignar Coordinador</a>
             </div>
           `;
       }
@@ -596,16 +598,16 @@
         const p = data.personero_centro_votacion;
         const initials = p.nombre_completo.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
         cvContainer.innerHTML = `
-            <div class="mesa-card">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <span class="mesa-number">Personero de Centro</span>
-                <span class="badge ${p.estado === 'Confirmado' ? 'badge-confirmado' : 'badge-pendiente'}" style="font-size:8.5px; padding:2px 6px;">${p.estado}</span>
+            <div class="person-badge">
+              <div class="person-avatar" style="background: linear-gradient(135deg, var(--jp-green), #85e090);">${initials}</div>
+              <div class="person-info">
+                <div class="person-name">${p.nombre_completo}</div>
+                <div class="person-meta">
+                  <span class="meta-item"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 014 0"/></svg> DNI: ${p.dni}</span>
+                  <span class="meta-item"><svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg> ${p.celular}</span>
+                </div>
               </div>
-              <div class="mesa-person-name">${p.nombre_completo}</div>
-              <div style="font-size:11px; color:var(--text-secondary); display:flex; gap:10px;">
-                <span>DNI: ${p.dni}</span>
-                <span>Cel: ${p.celular}</span>
-              </div>
+              <span class="badge ${p.estado === 'Confirmado' ? 'badge-confirmado' : 'badge-pendiente'}">${p.estado}</span>
             </div>
           `;
       } else {
@@ -613,7 +615,7 @@
             <div class="no-assigned" style="border-color: rgba(227,30,36,0.4); background: rgba(227,30,36,0.03);">
               <span style="font-size: 28px; display: block; margin-bottom: 6px;">🚨</span>
               <p style="font-size:13px; font-weight:600; color: #ef4444;">Sin Personero de Centro Asignado</p>
-              <a href="/personeros/registro/?cargo=Coordinador2&centro_votacion=${data.local.id}" class="btn btn-red btn-assign" style="margin-top:10px; background:#dc2626; box-shadow:0 4px 10px rgba(220,38,38,0.25);">Asignar Personero de Centro</a>
+              <a href="/personeros/registro/?cargo=Coordinador2&centro_votacion=${data.local.id}&local_id=${data.local.id}" class="btn btn-red btn-assign" style="margin-top:10px; background:#dc2626; box-shadow:0 4px 10px rgba(220,38,38,0.25);">Asignar Personero de Centro</a>
             </div>
           `;
       }
@@ -665,7 +667,7 @@
         freeCard.innerHTML = `
             <div style="font-size:18px; margin-bottom:4px;">✏️</div>
             <div style="font-size:12px; font-weight:600; color:var(--jp-green)">${missingCount} mesas libres esperadas</div>
-            <a href="/personeros/registro/?cargo=Coordinador3&centro_votacion=${data.local.id}" class="btn-assign" style="margin-top:6px; color:var(--jp-green); background:rgba(57,181,74,0.08); border:1px solid rgba(57,181,74,0.2)">
+            <a href="/personeros/registro/?cargo=Coordinador3&centro_votacion=${data.local.id}&local_id=${data.local.id}" class="btn-assign" style="margin-top:6px; color:var(--jp-green); background:rgba(57,181,74,0.08); border:1px solid rgba(57,181,74,0.2)">
               + Asignar nueva mesa
             </a>
           `;
@@ -693,6 +695,12 @@
       initialPlaceholder.style.display = 'block';
       alert('Ocurrió un error al cargar la estructura electoral de este local. Por favor, intente nuevamente.');
     }
+  }
+
+  // --- Auto-cargar Local Preseleccionado ---
+  const preselectedId = "{{ preselected_local_id }}";
+  if (preselectedId) {
+    loadLocalDetail(preselectedId);
   }
   });
 </script>

@@ -9,17 +9,37 @@
 </div>
 
 <div class="section-card" style="max-width: 700px; margin: 0 auto; padding: 40px; border-radius: 20px;">
-  
-  {% if messages %}
-    {% for msg in messages %}
-      <div class="alert alert-{{ msg.tags }}" style="margin-bottom:20px">
-        {{ msg }}
-      </div>
-    {% endfor %}
-  {% endif %}
+  <style>
+    @keyframes spin {
+      0% { transform: translateY(-50%) rotate(0deg); }
+      100% { transform: translateY(-50%) rotate(360deg); }
+    }
+    .dni-found-alert {
+      background: rgba(57, 181, 74, 0.1);
+      border: 1px solid rgba(57, 181, 74, 0.3);
+      color: #85e090;
+      padding: 14px 18px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: fadeIn 0.3s ease;
+      box-shadow: 0 4px 15px rgba(57, 181, 74, 0.05);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
 
   <form method="post">
     {% csrf_token %}
+    
+    <!-- Hidden assignment context fields -->
+    <input type="hidden" name="cargo" value="{{ cargo }}">
+    <input type="hidden" name="centro_votacion" value="{{ centro_votacion_id }}">
 
     <div style="font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); margin-bottom: 20px;">
       Datos Personales
@@ -47,7 +67,17 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
       <div class="form-group">
         <label class="form-label" style="font-weight: 700; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">DNI</label>
-        {{ form.dni }}
+        <div style="display: flex; gap: 8px; position: relative;">
+          <div style="position: relative; flex: 1;">
+            {{ form.dni }}
+            <div id="dni-loading-spinner" style="display: none; position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; border: 2px.5 solid var(--border); border-top-color: var(--jp-green); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          </div>
+          <button type="button" id="btn-buscar-dni" class="btn btn-green" style="padding: 0 16px; display: flex; align-items: center; justify-content: center; height: 42px; width: 46px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width: 18px; height: 18px;">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </button>
+        </div>
         {{ form.dni.errors }}
       </div>
       <div class="form-group">
@@ -86,9 +116,26 @@
       </div>
     </div>
 
+    <!-- Editable o hidden Número de Mesa -->
+    {% if cargo == 'Coordinador3' %}
+    <div style="font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-secondary); margin-bottom: 20px; padding-top: 10px; border-top: 1px solid var(--border);">
+      Datos de Mesa
+    </div>
+    <div class="form-group" style="margin-bottom: 30px;">
+      <label class="form-label" style="font-weight: 700; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; display: block;">Número de Mesa</label>
+      <input type="text" name="numero_mesa" class="form-input" placeholder="Ej: 0045" value="{{ numero_mesa }}" required style="font-size: 16px; font-weight: 700;">
+    </div>
+    {% else %}
+    <input type="hidden" name="numero_mesa" value="{{ numero_mesa }}">
+    {% endif %}
+
     <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
-      <a href="{% url 'personeros:lista' %}" class="btn btn-ghost">Cancelar</a>
-      <button type="submit" class="btn btn-green" style="padding: 12px 24px;">Registrar Personero</button>
+      {% if centro_votacion_id %}
+      <a href="{% url 'personeros:consulta_local' %}?local_id={{ centro_votacion_id }}" class="btn btn-ghost">Cancelar</a>
+      {% else %}
+      <a href="{% url 'personeros:consulta_local' %}" class="btn btn-ghost">Cancelar</a>
+      {% endif %}
+      <button type="submit" class="btn btn-green" style="padding: 12px 24px;">Guardar y Asignar</button>
     </div>
   </form>
 </div>
@@ -134,6 +181,130 @@
                 });
             });
         });
+
+        // --- Pre-seleccionar Callao por defecto si es un nuevo registro ---
+        if (!$depto.val()) {
+            $depto.val('07'); // Callao
+            
+            // Cargar provincias
+            $prov.empty().append('<option value="">Seleccione Provincia</option>');
+            $dist.empty().append('<option value="">Seleccione Distrito</option>');
+            
+            $.getJSON('/personeros/api/provincias/', { departamento: '07' }, function(provData) {
+                $.each(provData.provincias, function(index, item) {
+                    $prov.append($('<option>', {
+                        value: item.id_ubigeo,
+                        text: item.nombre
+                    }));
+                });
+                
+                // Pre-seleccionar Provincia Constitucional del Callao
+                $prov.val('0701');
+                
+                // Cargar distritos
+                $dist.empty().append('<option value="">Seleccione Distrito</option>');
+                $.getJSON('/personeros/api/distritos/', { provincia: '0701' }, function(distData) {
+                    $.each(distData.distritos, function(index, item) {
+                        $dist.append($('<option>', {
+                            value: item.id_ubigeo,
+                            text: item.nombre
+                        }));
+                    });
+                });
+            });
+        }
+
+        // --- Búsqueda Inteligente por DNI ---
+        let lastSearchedDni = '';
+
+        function buscarDni() {
+            const dniVal = $('#id_dni').val().trim();
+            if (dniVal.length !== 8 || !/^\d+$/.test(dniVal)) {
+                return;
+            }
+            if (dniVal === lastSearchedDni) {
+                return;
+            }
+            lastSearchedDni = dniVal;
+
+            $('#dni-loading-spinner').show();
+            $('#btn-buscar-dni').prop('disabled', true);
+            $('#dni-found-banner').remove();
+
+            $.getJSON('/personeros/api/buscar-dni/', { dni: dniVal }, function(data) {
+                $('#dni-loading-spinner').hide();
+                $('#btn-buscar-dni').prop('disabled', false);
+
+                if (data.exists) {
+                    // Mostrar alerta premium
+                    const bannerHtml = `
+                        <div id="dni-found-banner" class="dni-found-alert">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width: 20px; height: 20px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span><strong>¡Personero encontrado!</strong> Se cargaron los datos de <strong>${data.nombres} ${data.apellido_paterno}</strong>. Al guardar se actualizará su asignación en el sistema.</span>
+                        </div>
+                    `;
+                    $('.section-card form').prepend(bannerHtml);
+
+                    // Rellenar campos
+                    $('#id_apellido_paterno').val(data.apellido_paterno);
+                    $('#id_apellido_materno').val(data.apellido_materno);
+                    $('#id_nombres').val(data.nombres);
+                    $('#id_nro_celular').val(data.celular);
+                    $('#id_fecha_nacimiento').val(data.fecha_nacimiento);
+
+                    // Rehidratar UBIGEO
+                    if (data.departamento) {
+                        $depto.val(data.departamento);
+                        $prov.empty().append('<option value="">Seleccione Provincia</option>');
+                        $dist.empty().append('<option value="">Seleccione Distrito</option>');
+                        
+                        $.getJSON('/personeros/api/provincias/', { departamento: data.departamento }, function(provData) {
+                            $.each(provData.provincias, function(index, item) {
+                                $prov.append($('<option>', {
+                                    value: item.id_ubigeo,
+                                    text: item.nombre
+                                }));
+                            });
+                            
+                            if (data.provincia) {
+                                $prov.val(data.provincia);
+                                $dist.empty().append('<option value="">Seleccione Distrito</option>');
+                                $.getJSON('/personeros/api/distritos/', { provincia: data.provincia }, function(distData) {
+                                    $.each(distData.distritos, function(index, item) {
+                                        $dist.append($('<option>', {
+                                            value: item.id_ubigeo,
+                                            text: item.nombre
+                                        }));
+                                    });
+                                    if (data.distrito) {
+                                        $dist.val(data.distrito);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                } else {
+                    // Notificar que no existe y se creará uno nuevo
+                    const bannerHtml = `
+                        <div id="dni-found-banner" class="dni-found-alert" style="background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); color: #93c5fd;">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="width: 20px; height: 20px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>DNI no registrado en el sistema. Complete los campos para crear un nuevo registro de personero.</span>
+                        </div>
+                    `;
+                    $('.section-card form').prepend(bannerHtml);
+                }
+            }).fail(function() {
+                $('#dni-loading-spinner').hide();
+                $('#btn-buscar-dni').prop('disabled', false);
+            });
+        }
+
+        $('#id_dni').on('blur', buscarDni);
+        $('#btn-buscar-dni').on('click', buscarDni);
     });
 </script>
 {% endblock %}

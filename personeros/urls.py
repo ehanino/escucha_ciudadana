@@ -22,4 +22,5 @@ urlpatterns = [
     path('api/distritos/',  views.api_distritos_view,  name='api_distritos'),
     path('api/centros/',    views.api_centros_view,    name='api_centros'),
     path('api/local-detalle/<int:local_id>/', views.api_local_detalle_view, name='api_local_detalle'),
+    path('api/buscar-dni/', views.api_buscar_dni_view, name='api_buscar_dni'),
 ]
