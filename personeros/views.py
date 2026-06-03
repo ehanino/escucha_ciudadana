@@ -666,9 +666,9 @@ def descargar_credencial_view(request, pk):
                         if personero.cargo == 'Coordinador3':
                             mesa_val = personero.numero_mesa.strip() if personero.numero_mesa else ""
                             if mesa_val:
-                                r.text = f"PERSONERO DE CENTRO DE MESA DE SUFRAGIO N° {mesa_val} "
+                                r.text = f"PERSONERO DE MESA DE SUFRAGIO N° {mesa_val} "
                             else:
-                                r.text = "PERSONERO DE CENTRO DE MESA DE SUFRAGIO N° _________________ "
+                                r.text = "PERSONERO DE MESA DE SUFRAGIO N° _________________ "
                         elif personero.cargo == 'Coordinador1':
                             r.text = "COORDINADOR ZONAL "
                         else:
