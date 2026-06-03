@@ -658,6 +658,22 @@ def descargar_credencial_view(request, pk):
         # 4. Modificar el archivo docx con los datos del personero
         doc = docx.Document(template_path)
 
+        # Modificar el cargo en el párrafo de otorgamiento de credencial de acuerdo al cargo del personero
+        for p in doc.paragraphs:
+            if "se otorga la presente credencial" in p.text:
+                for r in p.runs:
+                    if "PERSONERO DE CENTRO" in r.text:
+                        if personero.cargo == 'Coordinador3':
+                            mesa_val = personero.numero_mesa.strip() if personero.numero_mesa else ""
+                            if mesa_val:
+                                r.text = f"PERSONERO DE CENTRO DE MESA DE SUFRAGIO N° {mesa_val} "
+                            else:
+                                r.text = "PERSONERO DE CENTRO DE MESA DE SUFRAGIO N° _________________ "
+                        elif personero.cargo == 'Coordinador1':
+                            r.text = "COORDINADOR ZONAL "
+                        else:
+                            r.text = "PERSONERO DE CENTRO DE VOTACIÓN "
+
         # Configurar la hoja en formato A4 (21.0 cm x 29.7 cm) para compatibilidad estándar
         from docx.shared import Cm
         for section in doc.sections:
