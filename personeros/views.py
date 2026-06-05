@@ -926,7 +926,7 @@ def consulta_local_view(request):
     return render(request, 'personeros/consulta_local.html', context)
 
 
-@login_required(login_url='personeros:login')
+# @login_required(login_url='personeros:login')
 def api_local_detalle_view(request, local_id):
     perfil = get_perfil(request.user)
     if perfil and perfil.es_personero:
