@@ -78,9 +78,11 @@ def registro_publico_view(request):
 
 def get_perfil(user):
     """Retorna el PerfilUsuario o None si no tiene."""
+    if not user or user.is_anonymous:
+        return None
     try:
         return user.perfil
-    except PerfilUsuario.DoesNotExist:
+    except (PerfilUsuario.DoesNotExist, AttributeError):
         return None
 
 
@@ -903,7 +905,6 @@ def validar_credencial_publica_view(request, token_uuid):
     return render(request, 'personeros/validar_credencial.html', context)
 
 
-@login_required(login_url='personeros:login')
 def consulta_local_view(request):
     perfil = get_perfil(request.user)
     if perfil and perfil.es_personero:
@@ -926,7 +927,6 @@ def consulta_local_view(request):
     return render(request, 'personeros/consulta_local.html', context)
 
 
-# @login_required(login_url='personeros:login')
 def api_local_detalle_view(request, local_id):
     perfil = get_perfil(request.user)
     if perfil and perfil.es_personero:

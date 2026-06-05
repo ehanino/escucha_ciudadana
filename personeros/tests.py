@@ -574,10 +574,10 @@ class PersoneroConsultaLocalTestCase(TestCase):
         self.client = Client()
 
     def test_consulta_local_view_access(self):
-        """Verifica que un administrador pueda acceder al panel de consulta local y un personero común sea redirigido."""
-        # Intento anónimo redirecciona
+        """Verifica que un administrador y un usuario anónimo puedan acceder al panel de consulta local, y un personero común sea redirigido."""
+        # Intento anónimo accede con éxito
         response = self.client.get(reverse('personeros:consulta_local'))
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 200)
 
         # Admin accede con éxito
         self.client.login(username='admin_test', password='password123')
