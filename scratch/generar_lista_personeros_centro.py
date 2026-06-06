@@ -19,7 +19,7 @@ def generate_report():
     
     # 1. Consultar todos los personeros con cargo Coordinador2 (Personero de Centro de Votación)
     # sin filtro de estado, ordenando por distrito y nombres
-    personeros = Personero.objects.filter(cargo='Coordinador2').select_related('distrito').order_by(
+    personeros = Personero.objects.filter(cargo='Coordinador2').select_related('distrito', 'centro_votacion').order_by(
         'distrito__nombre', 'apellido_paterno', 'apellido_materno'
     )
     
@@ -34,6 +34,7 @@ def generate_report():
     # Cabeceras
     headers = [
         "Distrito",
+        "Centro de Votación",
         "Apellido Paterno",
         "Apellido Materno",
         "Nombres",
@@ -67,15 +68,17 @@ def generate_report():
     row_idx = 2
     for p in personeros:
         distrito_nombre = p.distrito.nombre if p.distrito else "SIN DISTRITO"
+        centro_nombre = p.centro_votacion.nombre if p.centro_votacion else "SIN ASIGNAR"
         
         ws.cell(row=row_idx, column=1, value=distrito_nombre).alignment = left_align
-        ws.cell(row=row_idx, column=2, value=p.apellido_paterno).alignment = left_align
-        ws.cell(row=row_idx, column=3, value=p.apellido_materno).alignment = left_align
-        ws.cell(row=row_idx, column=4, value=p.nombres).alignment = left_align
-        ws.cell(row=row_idx, column=5, value=p.dni).alignment = center_align
-        ws.cell(row=row_idx, column=6, value=p.nro_celular).alignment = center_align
+        ws.cell(row=row_idx, column=2, value=centro_nombre).alignment = left_align
+        ws.cell(row=row_idx, column=3, value=p.apellido_paterno).alignment = left_align
+        ws.cell(row=row_idx, column=4, value=p.apellido_materno).alignment = left_align
+        ws.cell(row=row_idx, column=5, value=p.nombres).alignment = left_align
+        ws.cell(row=row_idx, column=6, value=p.dni).alignment = center_align
+        ws.cell(row=row_idx, column=7, value=p.nro_celular).alignment = center_align
         
-        for col_idx in range(1, 7):
+        for col_idx in range(1, 8):
             cell = ws.cell(row=row_idx, column=col_idx)
             cell.border = thin_border
             cell.font = Font(name="Calibri", size=10)
